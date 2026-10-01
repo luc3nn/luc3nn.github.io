@@ -1,0 +1,11 @@
+# Archivos generados por Hugo
+/public/
+/resources/_gen/
+/assets/jsconfig.json
+hugo_stats.json
+.hugo_build.lock
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
