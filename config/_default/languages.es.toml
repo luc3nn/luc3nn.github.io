@@ -1,0 +1,26 @@
+disabled = false
+locale = "es"
+label = "Español"
+weight = 1
+title = "Luc3nn"
+
+[params]
+  displayName = "ES"
+  isoCode = "es"
+  rtl = false
+  dateFormat = "2 de January de 2006"
+  # logo = "img/logo.png"
+  # secondaryLogo = "img/secondary-logo.png"
+  description = "Portfolio y artículos de ciberseguridad"
+  # copyright = "Copy, _right?_ :thinking_face:"
+
+[params.author]
+  name = "Luc3nn"
+  # email = "youremail@example.com"
+  # image = "img/blowfish_logo.png"
+  # imageQuality = 96
+  headline = "Wannabe security researcher | ejptv2"
+  # bio = "Apasionado de la ciberseguridad"
+  links = [
+    { github = "https://github.com/luc3nn" },
+  ]

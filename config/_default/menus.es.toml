@@ -1,0 +1,11 @@
+# -- Main Menu (Español) --
+
+[[main]]
+  name = "Artículos"
+  pageRef = "posts"
+  weight = 10
+
+[[main]]
+  name = "Etiquetas"
+  pageRef = "tags"
+  weight = 20
