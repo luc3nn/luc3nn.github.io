@@ -9,16 +9,16 @@ title = "Luc3nn"
   isoCode = "es"
   rtl = false
   dateFormat = "2 de January de 2006"
-  # logo = "img/logo.png"
+  # logo = "img/logo.png  "
   # secondaryLogo = "img/secondary-logo.png"
   description = "Portfolio y artículos de ciberseguridad"
   # copyright = "Copy, _right?_ :thinking_face:"
 
 [params.author]
   name = "Luc3nn"
-  # email = "youremail@example.com"
-  # image = "img/blowfish_logo.png"
-  # imageQuality = 96
+  # email = "luc3nn"
+  image = "img/img.png"
+  imageQuality = 96
   headline = "Wannabe security researcher | ejptv2"
   # bio = "Apasionado de la ciberseguridad"
   links = [

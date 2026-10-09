@@ -1,5 +1,8 @@
 ---
 title: "Windows 11 en KVM con Single GPU Passthrough"
+featureimage: "img/portada.jpg"
+showHero: true
+heroStyle: "basic"   #
 date: 2026-10-09T01:00:00+02:00
 draft: false
 description: "Guía completa para configurar una máquina virtual de Windows 11 en KVM/QEMU con Single GPU Passthrough, CPU Pinning y Hugepages en Arch Linux."
