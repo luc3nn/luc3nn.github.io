@@ -1,5 +1,5 @@
 ---
-title: "Auditoría de Active Directory y Pivoting (AD PWN)"
+title: "Trabajo de síntesis GM (AD PWN)"
 date: 2024-06-15T01:00:00+02:00
 draft: false
 featureimage: "img/portada.jpg"
