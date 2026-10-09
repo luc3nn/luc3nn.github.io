@@ -4,7 +4,7 @@
 # Script para migrar notas y writeups de Obsidian a Hugo (Tema Blowfish)
 # Compatible al 100% con Linux y macOS (usa Python 3 disponible en ambos sistemas)
 # - Copia las imágenes desde tus apuntes a la carpeta 'img/' del post.
-# - Convierte los enlaces ![[imagen.png]] a ![](<img/imagen.png>)
+# - Soporta enlaces Wiki ![[...]], etiquetas HTML <img src="..."> y Markdown ![](...)
 # - Maneja nombres con espacios y modificadores de tamaño (|400, etc.).
 # ==============================================================================
 
@@ -36,14 +36,38 @@ print("-" * 60)
 with open(target_file, "r", encoding="utf-8") as f:
     content = f.read()
 
-# Extraer todos los enlaces de imágenes de Obsidian ![[...]]
-matches = re.findall(r'!\[\[(.*?)\]\]', content)
+# 1. Extraer enlaces Wiki ![[...]]
+matches_wiki = re.findall(r'!\[\[(.*?)\]\]', content)
+
+# 2. Extraer etiquetas HTML <img ... src="..." ...>
+matches_html = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', content)
+
+# 3. Extraer Markdown estándar ![...](...)
+matches_md = re.findall(r'!\[.*?\]\((.*?)\)', content)
 
 unique_files = []
-for m in matches:
-    name = m.split('|')[0].strip()
+
+def add_clean_name(name):
+    if not name:
+        return
+    name = name.strip()
+    if name.startswith("<") and name.endswith(">"):
+        name = name[1:-1].strip()
+    name = name.split("?")[0].split("#")[0].strip()
+    # Ignorar enlaces remotos de internet
+    if name.startswith(("http://", "https://", "data:")):
+        return
+    # Si ya tiene prefijo img/, limpiarlo para buscar el archivo real
+    if name.startswith("img/"):
+        name = name[4:].strip()
     if name and name not in unique_files:
         unique_files.append(name)
+
+for m in matches_wiki:
+    add_clean_name(m.split('|')[0])
+
+for m in matches_html + matches_md:
+    add_clean_name(m.split('|')[0])
 
 total = len(unique_files)
 copiadas = 0
@@ -71,7 +95,6 @@ for file_name in unique_files:
     # 2. Buscar recursivamente en ~/Documents/
     found = None
     for root, dirs, files in os.walk(docs_dir):
-        # Evitar carpetas pesadas/ocultas innecesarias
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('node_modules', 'public', 'resources')]
         if file_name in files:
             found = os.path.join(root, file_name)
@@ -88,23 +111,33 @@ for file_name in unique_files:
 print("-" * 60)
 print(f"🔄 Actualizando sintaxis de imágenes en '{os.path.basename(target_file)}'...")
 
-# Reemplaza ![[archivo.png]] o ![[archivo.png|parámetros]] por ![](<img/archivo.png>)
-def repl(match):
+# Reemplaza ![[archivo.png]] por ![](<img/archivo.png>)
+def repl_wiki(match):
     name = match.group(1).split('|')[0].strip()
     return f"![](<img/{name}>)"
 
-new_content = re.sub(r'!\[\[([^]|]+)(?:\|[^]]*)?\]\]', repl, content)
+content = re.sub(r'!\[\[([^]|]+)(?:\|[^]]*)?\]\]', repl_wiki, content)
+
+# Actualiza <img src="archivo.png"> por <img src="img/archivo.png"> (si no es remoto y no tiene ya img/)
+def repl_html(match):
+    full = match.group(0)
+    src = match.group(1).strip()
+    if src.startswith(("http://", "https://", "data:", "img/")):
+        return full
+    return full.replace(f'src="{src}"', f'src="img/{src}"').replace(f"src='{src}'", f"src='img/{src}'")
+
+content = re.sub(r'<img[^>]+src=["\']([^"\']+)["\']', repl_html, content)
 
 with open(target_file, "w", encoding="utf-8") as f:
-    f.write(new_content)
+    f.write(content)
 
 print("✨ ¡Listo!")
-print(f"   - Total imágenes referenciadas: {total}")
-print(f"   - Imágenes copiadas a ./img/:   {copiadas}")
+print(f"   - Total imágenes locales referenciadas: {total}")
+print(f"   - Imágenes copiadas a ./img/:           {copiadas}")
 if faltantes > 0:
-    print(f"   - Imágenes faltantes:          {faltantes}")
+    print(f"   - Imágenes faltantes:                  {faltantes}")
 
-if not new_content.lstrip().startswith("---"):
+if not content.lstrip().startswith("---"):
     print("")
     print(f"⚠️  AVISO: '{os.path.basename(target_file)}' no tiene cabecera frontmatter (---).")
     print("   Recuerda añadir el título, fecha y tags al inicio del archivo.")

