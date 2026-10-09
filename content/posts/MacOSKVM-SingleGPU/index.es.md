@@ -26,11 +26,11 @@ A diferencia de el anterior post de la virtualización de Windows11 para gaming.
 
 Una vez expuestos mis fetiches, comparto una imágen del resultado final y seguidamente toca explicar de nuevo terminos que utlizaremos durante el post.
 
-![[Pasted image 20261009222436.png]]
+![](<img/Pasted image 20261009222436.png>)
 
 Para esto empezamos usando un hipervisor de tipo 1, en este caso existen 2 tipos de hipervisores: Tipo 1 y Tipo 2. La cualidad que define cual es cada tipo de hipervisor es el nivel de detalle sobre el control que tenemos sobre la máquina virtual invitada, esto se traduce en poder controlar cosas como por ejemplo la habilidad de poder dar hardware de nuestro ordenador a la máquina virtual como **Discos duros**, **GPUs**, **Antena Bluetooth**. La idea con esto es poder exprimir más el rendimiento de nuestra máquina virtual, ya que en vez de tener que virtualizar todo de nuevo, simplemente le pasamos el hardware directamente. 
 
-![[Pasted image 20260930234311.png]]
+![](<img/Pasted image 20260930234311.png>)
 
 Como podemos observar en la imagen y como decia anteriormente en este caso nos saltamos una capa entera que es la virtualización de hardware despues de la capa del sistema operativo, haciendo que nuestro sistema operativo sea el propio virtualizador. A este tipo de virtualización (Tipo 1) se le llama coloquialmente "Bare Metal". Una vez lo hemos definido, nos da algo de pistas de cual es cual, pero para acabar de definir, encontramos dentro del **Hipervisor de Tipo 2** a programas como **VMWare Workstation/Fusion**, **Virtualbox**, etc. Dentro del **Hipervisor de Tipo 1** encontramos tanto sitemas operativos completos donde el unico objetivo es virtualizar: **Proxmox**, **VMWare Esxi**, **Citrix**, etc. Como "herramientas" que nos permiten transformar nuestro sistema operativo en un **Hipervisor de Tipo 1**: **KVM**, **Hyper-V**, **Docker** (Postman, aunque entran dentro de LXC en Linux y Hyper-V en Windows).
 
@@ -45,13 +45,13 @@ Para comenzar primero debemos crear nuestro "USB" de booteo, para ello primero i
 ```bash
 sudo pacman -S qemu dosfstools --needed
 ```
-![[Pasted image 20261001000627.png]]
+![](<img/Pasted image 20261001000627.png>)
 Una vez nos hemos asegurado que lo tenemos instaladas las dependencias para crear el disco virtual, creamos este.
 
 ```bash
 qemu-img create -f raw OpenCore.img 2G #Con 2G tenemos más que suficiente sobretodo para logs
 ```
-![[Pasted image 20261001001327.png]]
+![](<img/Pasted image 20261001001327.png>)
 En este caso una vez que lo tenemos creado, lo conectamos.
 
 ```
@@ -60,27 +60,27 @@ En este caso una vez que lo tenemos creado, lo conectamos.
 ➜  lsblk -o NAME | grep "^nbd[0-9]\+$"
 ```
 
-![[Pasted image 20261001001443.png]]
+![](<img/Pasted image 20261001001443.png>)
 Una vez conectado lo vamos a formatear a `FAT32`.
 
 ```bash
 sudo mkfs.fat -F 32 -n "OPENCORE" -I /dev/nbd0
 ```
 
-![[Pasted image 20261001001554.png]]
+![](<img/Pasted image 20261001001554.png>)
 Hecho, simplemente lo montamos en nuestro entorno de trabajo en el directorio que queramos, en este caso he creado una carpeta llamada `mnt` dentro de el directorio de trabajo.
 
 ```
 sudo mount -o uid=$(id -u),gid=$(id -g) /dev/nbd0 mnt
 ```
 
-![[Pasted image 20261001001658.png]]
+![](<img/Pasted image 20261001001658.png>)
 Sencillo. Ahora viene la parte mas "Divertida", crear la EFI.
 
 ## Creación de EFI
 
 Para crear nuestra EFI utilizaremos el archivo de **[OpenCorePKG](https://github.com/acidanthera/OpenCorePkg/releases/)**, para ello primero lo descargamos, en este caso la versión `DEBUG`, este nos permitirá depurar todos los errores y asi poder arreglarlo, una vez tengamos una `EFI` funcional, podemos pasarlo al **RELEASE**.
-![[Pasted image 20261001192613.png]]
+![](<img/Pasted image 20261001192613.png>)
 Una vez abierto, lo descomprimimos, y entendemos que el directorio desde donde tenemos que empezar a trabar es `X64` ya que esta es la arquitectura de nuestro procesador.
 
 ### Estructura de una Carpeta EFI
@@ -88,7 +88,7 @@ Una vez abierto, lo descomprimimos, y entendemos que el directorio desde donde t
 Antes de describir como se estructura una carpeta EFI, debemos entender que es **OpenCorePKG**. Este es un bootloader, el cual se encarga de interceptar las peticiones durante el arranque y emular/traducir estas para que **MacOS** crea que se esta ejecutando en un MAC real y adicionalmente pueda funcionar bien.
 
 Dentro de la carpeta `X64` encontramos la carpeta `EFI`, esta se compone de las siguientes subcarpetas:
-![[Pasted image 20261009180900.png]]
+![](<img/Pasted image 20261009180900.png>)
 En este caso tenemos un archivo que aun no tenemos en el archivo que acabamos de descargar, este es un ejemplo de EFI acabada. Como podemos ver, se compone de la siguiente estructura:
 
 ```nose
@@ -153,7 +153,7 @@ Para ello nos ponemos en el directorio `X64/EFI/OC` y ejecutamos el siguiente co
 cp ../../../Docs/Sample.plist config.plist
 ```
 
-![[Pasted image 20261001193745.png]]
+![](<img/Pasted image 20261001193745.png>)
 Os comparto mi config.plist en el caso de que tengais AMD para que solo tengais que hacer un `OC Clean Snapshot`. En el caso de que quieras montartela tú, una vez hecho, ya tenemos el archivo de config (más tarde lo configuramos). Ahora comencemos con la carpeta `ACPI`
 
 #### ACPI
@@ -212,7 +212,7 @@ A diferencia de las guías convencionales de OSX-KVM basadas en overlays de Inte
 
 Quedando de la siguiente manera:
 
-![[Pasted image 20261009193535.png]]
+![](<img/Pasted image 20261009193535.png>)
 #### Drivers
 
 Una vez instalado los `SSDT`, vamos a instalar los drivers, para ello, eliminamos todos menos:
@@ -228,7 +228,7 @@ wget https://github.com/acidanthera/OcBinaryData/raw/master/Drivers/HfsPlus.efi
 
 Una vez lo tenemos la carpeta nos debería quedar asi:
 
-![[Pasted image 20261009194606.png]]
+![](<img/Pasted image 20261009194606.png>)
 #### Kexts
 
 Ahora pasamos a la parte más divertida, los kexts. En este caso necesitamos los siguientes si o si:
@@ -245,14 +245,14 @@ Una vez los tenemos, tenemos otros opcionales, pero que necesitaremos para no es
 | [RestrictEvents](https://github.com/acidanthera/RestrictEvents)                                | Permite cambios esteticos y bloquear procesos que puedan provocar problemas de compatibilidad (requiere lilu). |
 
 El resultado final se debería ver así.
-![[Pasted image 20261009195438.png]]
+![](<img/Pasted image 20261009195438.png>)
 #### Resources
 
 En este caso ya estamos apunto de acabar de descargar archivos para la EFI, en este caso esto es puramente éstetico, por lo que es opcional.
 
 | Antes                                     | Después                                   |
 | ----------------------------------------- | ----------------------------------------- |
-| ![[Pasted image 20261009195758.png\|362]] | ![[Pasted image 20261002104810.png\|327]] |
+| ![](<img/Pasted image 20261009195758.png\>) | ![](<img/Pasted image 20261002104810.png\>) |
 Para conseguir esto, necesitamos clonar el repositorio [OcBinaryData](https://github.com/acidanthera/OcBinaryData).
 
 ```bash
@@ -260,9 +260,9 @@ mkdir temp && cd temp && git clone https://github.com/acidanthera/OcBinaryData.g
 rm -rf ../Resources && mv OcBinaryData/Resources ../
 ```
 
-![[Pasted image 20261001215007.png]]
+![](<img/Pasted image 20261001215007.png>)
 En este caso simplemente creamos un directorio temporal dentro de `OC`y despues lo eliminamos.
-![[Pasted image 20261009200216.png]]
+![](<img/Pasted image 20261009200216.png>)
 ### Configuración de config.plist
 
 Ahora ya tenemos todo lo que necesitamos, necesitamos generar el archivo de configuración el cual mapeara todos estos archivos y le añadiremos "opciones" cuando lo necesite.
@@ -274,18 +274,18 @@ git clone https://github.com/corpnewt/ProperTree
 python3 ProperTree/ProperTree.py
 ```
 
-![[Pasted image 20261001194001.png]]
+![](<img/Pasted image 20261001194001.png>)
 Una vez ejecutado, importamos nuestro `config.plist`
 
-![[Pasted image 20261001195241.png]]
-![[Pasted image 20261001195315.png]]
+![](<img/Pasted image 20261001195241.png>)
+![](<img/Pasted image 20261001195315.png>)
 
 Una vez añadido, le eliminamos los comentarios.
-![[Pasted image 20261001195530.png]]
+![](<img/Pasted image 20261001195530.png>)
 
 Una vez lo tenemos, ya podemos empezar a trabajar, para hacerlo de manera más ordenada vamos a cerrar todas las opciones.
 
-![[Pasted image 20261001200141.png]]
+![](<img/Pasted image 20261001200141.png>)
 Vamos a abrir con otra instancia de `ProperTree` el archivo `patch.plist` para parchear el kernel para AMD de el siguiente [repo](https://github.com/AMD-OSX/AMD_Vanilla/)
 
 ```bash
@@ -294,7 +294,7 @@ python3 ProperTree/ProperTree.py
 ```
 
 Una vez abierto hacemos click en `Collapse All` de nuevo y hacemos click derecho y `Copy Children` a `Kernel/Patch`. Seguidamente lo pegamos en nuestro `config.plist`
-![[Pasted image 20261001200346.png]]
+![](<img/Pasted image 20261001200346.png>)
 Una vez lo tenemos vamos a pegar el siguiente texto en `Kernel/Patch` de nuevo.
 
 ```plist
@@ -334,10 +334,10 @@ Una vez lo tenemos vamos a pegar el siguiente texto en `Kernel/Patch` de nuevo.
 </plist>
 ```
 
-![[Pasted image 20261001200346.png]]
+![](<img/Pasted image 20261001200346.png>)
 Este es un fix para que el kernel sea capaz de poder mapear el pasthrough de PCI que haremos más tarde. El resultado es el siguiente:
 
-![[Pasted image 20261009203654.png]]
+![](<img/Pasted image 20261009203654.png>)
 
 Seguidamente en `NVRAM/Add/7C43...` le pegamos lo siguiente para poder tenerlo en inglés.
 
@@ -346,21 +346,21 @@ Seguidamente en `NVRAM/Add/7C43...` le pegamos lo siguiente para poder tenerlo e
 	<data>ZW46MjUy</data>
 ```
 
-![[Pasted image 20261001200719.png]]
+![](<img/Pasted image 20261001200719.png>)
 Quedará así.
-![[Pasted image 20261001200659.png]]
+![](<img/Pasted image 20261001200659.png>)
 Eliminamos el que habia antes
-![[Pasted image 20261001200857.png]]
+![](<img/Pasted image 20261001200857.png>)
 Y modificamos el nuevo quitandole el 2
-![[Pasted image 20261001200918.png]]
+![](<img/Pasted image 20261001200918.png>)
 Seguidamente en `PlatformInfo/Generic/SystemProductName` debemos cambiar el valor a `MacPro7,1`. Esto lo hacemos ya que es el Mac más "parecido" con un ordenador normal por lo que es más facil de parchear.
-![[Pasted image 20261001201152.png]]
+![](<img/Pasted image 20261001201152.png>)
 
-![[Pasted image 20261001201212.png]]
+![](<img/Pasted image 20261001201212.png>)
 Seguidamente podemos quitar la restricción de que solo permite drivers APFS de `Big Sur` o superior cambiando el valor de `0` a `-1`
-![[Pasted image 20261001201311.png]]
+![](<img/Pasted image 20261001201311.png>)
 Quedará así
-![[Pasted image 20261009203751.png]]
+![](<img/Pasted image 20261009203751.png>)
 Seguidamente podémos cambiar info sobre 
 
 ```plist
@@ -382,15 +382,15 @@ Esto es en caso de que queramos pero el apartado de PlataformInfo si esta en gen
 Seguidamente cambiamos el tema de booteo, para ello cambiamos el valor de:
 - PickerMode = External
 - PickerVariant = Acidanthera\GoldenGate
-![[Pasted image 20261001215343.png]]
+![](<img/Pasted image 20261001215343.png>)
 Quedando así
-![[Pasted image 20261001215431.png]]
+![](<img/Pasted image 20261001215431.png>)
 Una vez ya tenemos todo configurado hacemos un `OC Clean Snapshot` para que añada todos los archivos descargados automaticamente
-![[Pasted image 20261001222424.png]]
+![](<img/Pasted image 20261001222424.png>)
 Seleccionamos el directorio de OC
-![[Pasted image 20261001222450.png]]
+![](<img/Pasted image 20261001222450.png>)
 Hecho, ahora vamos a seguir parcheando por secciones.
-![[Pasted image 20261001222503.png]]
+![](<img/Pasted image 20261001222503.png>)
 #### Booter
 
 Seguidamente cambiamos los siguientes valores
@@ -398,40 +398,40 @@ Seguidamente cambiamos los siguientes valores
 - RebuildAppleMemoryMap = True
 - SetupVirtualMap = False
 - SyncRuntimePermissions = True
-![[Pasted image 20261001222735.png]]
+![](<img/Pasted image 20261001222735.png>)
 #### Kernel
 
 Ahora cambiamos en `Kernel/Patch/MaxKernel` el valor a `29.99.99`
-![[Pasted image 20261001223049.png]]
+![](<img/Pasted image 20261001223049.png>)
 Adicionalmente en `Kernel/Quirks` cambiamos los siguientes valores:
 - ForceSecureBootScheme = True
 - PanicNoKextDump = True
 - PowerTimeoutKernelPanic = ProvideCurrentCpuInfo
-![[Pasted image 20261001223212.png]]
+![](<img/Pasted image 20261001223212.png>)
 En `Kernel/Scheme` dejamos los siguientes valores.
 - FuzzyMatch = False
 - KernelArch = x86_64
-![[Pasted image 20261001223315.png]]
+![](<img/Pasted image 20261001223315.png>)
 #### Misc
 Seguidamente nos aseguramos que en `Misc/Boot` la **Key** `PollAppleHotkeys` esté en `True`.
-![[Pasted image 20261001223345.png]]
+![](<img/Pasted image 20261001223345.png>)
 Después en `Misc/Debug`los siguientes valores.
 - AppleDebug = True
 - ApplePanic = True
 - DisableWatchDog = True
 - Target = 67
-![[Pasted image 20261001223428.png]]
+![](<img/Pasted image 20261001223428.png>)
 En `Misc/Security` cambiamos los valores:
 - AllowSetDefault = True
 - ExponseSensitiveData = 15
 - ScanPolicy = 0
 - Vault = Optional
-![[Pasted image 20261001223541.png]]
+![](<img/Pasted image 20261001223541.png>)
 #### NVRAM
 
 Aqui simplemente le ponemos dentro de la key `boot-args` el valor `debug=0x100 debug=0x12a serial=5 agdpmod=pikera -cdfon tlbto_us=0` (degug es para depuración y el resto para la grafica y parche de el procesador), debe quedar de la siguiente manera
 
-![[Pasted image 20261009211853.png]]
+![](<img/Pasted image 20261009211853.png>)
 #### PlataformInfo
 
 Ahora debemos descargar la siguiente [herramienta](https://github.com/corpnewt/GenSMBIOS) y ejecutarla.
@@ -443,12 +443,12 @@ python3 GenSMBIOS.py
 ```
 
 Escogemos la 3ra opción
-![[Pasted image 20261001223803.png]]
+![](<img/Pasted image 20261001223803.png>)
 
 Seguidamente ponemos `MacPro7,1`
-![[Pasted image 20261001223841.png]]
+![](<img/Pasted image 20261001223841.png>)
 Automaticamente nos genera la SMBIOS
-![[Pasted image 20261001223939.png]]
+![](<img/Pasted image 20261001223939.png>)
 Lo ponemos en nuestro `config.plist` siguiendo la siguiente tabla.
 
 | GenSMBIOS    | config.plist       |
@@ -458,7 +458,7 @@ Lo ponemos en nuestro `config.plist` siguiendo la siguiente tabla.
 | Type         | SystemProductName  |
 | Serial       | SystemSerialNumber |
 | SmUUID       | SystemUUID         |
-![[Pasted image 20261001224210.png]]
+![](<img/Pasted image 20261001224210.png>)
 Y ya hemos acabado de configurar nuestro `config.plist` ahora lo guardamos y podemos cerrar `ProperTree`.
 ## Descargando MacOS
 
@@ -471,7 +471,7 @@ python3 -m venv env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
-![[Pasted image 20261001230300.png]]
+![](<img/Pasted image 20261001230300.png>)
 Ahora lo ejecutamos
 
 ```bash
@@ -479,38 +479,38 @@ Ahora lo ejecutamos
 ```
 
 En este caso escogemos `RecoveryOS Installer` (2)
-![[Pasted image 20261001230408.png]] 
+![](<img/Pasted image 20261001230408.png>) 
 Escogemos la versión que queramos.
-![[Pasted image 20261001230505.png]]
+![](<img/Pasted image 20261001230505.png>)
 Una vez que se decargue salimos.
-![[Pasted image 20261001230454.png]]
+![](<img/Pasted image 20261001230454.png>)
 Si revisamos lo que se ha descargado, en este caso nos aparece una carpeta que pone `com.apple.recovery.boot`
-![[Pasted image 20261001230529.png]]
+![](<img/Pasted image 20261001230529.png>)
 Copiamos la carpeta `com.apple.recovery.boot` junto a la carpeta `EFI` que está dentro de `X64` dentro de la carpeta `mnt`.
-![[Pasted image 20261001230800.png]]
+![](<img/Pasted image 20261001230800.png>)
 una vez tenemos eso, podemos desmontar mnt.
 
 ```bash
 sudo umount mnt && sudo qemu-nbd --disconnect /dev/nbd0
 ```
-![[Pasted image 20261001230918.png]]
+![](<img/Pasted image 20261001230918.png>)
 Hecho, ya hemos acabado nuestro USB.
 # Creando la máquina virtual
 
 Comenzamos abriendo `virt-manager`, le damos al icono para crear una nueva máquina virtual.
-![[Pasted image 20261001231733.png]]
+![](<img/Pasted image 20261001231733.png>)
 Le ponemos `Manual install` porque añadiremos nuestro USB como disco virtual.
-![[Pasted image 20261001231746.png]]
+![](<img/Pasted image 20261001231746.png>)
 En cuanto a la versión del sistema operativo lo ponemos como `Generic...`.
-![[Pasted image 20261001231820.png]]
+![](<img/Pasted image 20261001231820.png>)
 En la ram ponemos icialmente 8gb o lo que podamos para el primer booteo e instalación (no hagais como la foto). En los hilos ponemos solo 1, al final todo lo modificaremos desde el XML.
-![[Pasted image 20261001231841.png]]
+![](<img/Pasted image 20261001231841.png>)
 Creamos un nuevo disco duro donde instalaremos MacOS.
-![[Pasted image 20261001231913.png]]
+![](<img/Pasted image 20261001231913.png>)
 le damos a la opción de `Customize configuration before install` para poder modificar parametros del XML.
-![[Pasted image 20261001231957.png]]
+![](<img/Pasted image 20261001231957.png>)
 Una vez entramos módificamos el chipset a `Q35`.
-![[Pasted image 20261001232132.png]]
+![](<img/Pasted image 20261001232132.png>)
 Seguidamente pegamos este XML dentro del apartado de XML después de apartado de `<uuid>` (cambiar donde pone `<!--CAMBIAR DIR-->`)
 
 
@@ -627,35 +627,35 @@ Seguidamente pegamos este XML dentro del apartado de XML después de apartado de
 ```
 
 Seguidamente lo podemos dar a `Begin Installation`.
-![[Pasted image 20261001234047.png]]
+![](<img/Pasted image 20261001234047.png>)
 PORFIN, ya carga Opencore, entramos en `RECOVERY.dmg`
-![[Pasted image 20261002104810.png]]
+![](<img/Pasted image 20261002104810.png>)
 # Instalando MacOS
 
 Esperamos a que cargue (puede tardar un poco)
-![[Pasted image 20261006144955.png]]
+![](<img/Pasted image 20261006144955.png>)
 Una vez en el recovery entramos en `Disk Utility`
-![[Pasted image 20261006144218.png]]
+![](<img/Pasted image 20261006144218.png>)
 Una vez dentro, en el `Sidebar` seleccionamos `Show All Devices`
-![[Pasted image 20261006144238.png]]
+![](<img/Pasted image 20261006144238.png>)
 Hacemos click a nuestro disco duro y le damos a `Erase`.
-![[Pasted image 20261006144326.png]]
+![](<img/Pasted image 20261006144326.png>)
 Le ponemos el nombre que queramos y le damos a `Erase`
-![[Pasted image 20261006144517.png]]
+![](<img/Pasted image 20261006144517.png>)
 Tardará poco y de ahi le damos a `Done`
-![[Pasted image 20261006144928.png]]
+![](<img/Pasted image 20261006144928.png>)
 Una vez formateado podemos salir y darle a `Reinstall macOS Seoquia`
-![[Pasted image 20261006145004.png]]
+![](<img/Pasted image 20261006145004.png>)
 Una vez dentro le damos a `Siguiente` hasta que nos deje instalar.
-![[Pasted image 20261006145046.png]]
+![](<img/Pasted image 20261006145046.png>)
 Una vez instalado nos aparecerá la siguiente pantalla.
-![[Pasted image 20261006173557.png]]
+![](<img/Pasted image 20261006173557.png>)
 Le vamos dando a siguiente y podemos iniciar sesión con la cuenta de Apple (le he dado a más tarde).
-![[Pasted image 20261006173916.png]]
+![](<img/Pasted image 20261006173916.png>)
 Al final de la instalación ya tendremos macOS pero sin acceleración gráfica ni nada, por lo que en este caso vamos a apagar la máquina virtual.
-![[Pasted image 20261006174550.png]]
+![](<img/Pasted image 20261006174550.png>)
 Siguiendo la guía [anterior](https://luc3nn.github.io/posts/windowskvm-singlegpu/#gpu-passthrough) sobre `GPU Pasthrough` sacamos la vbios, añadimos el pci de la gráfica.
-![[Pasted image 20261006193824.png]]
+![](<img/Pasted image 20261006193824.png>)
  Finalmente añadimos las siguientes líneas en el `prepare/begin/start.sh`
 ```prepare/begin/start.sh
 ## Unbind and Resize GPU BAR0 to 256MB for macOS ##
@@ -700,7 +700,7 @@ fi
 Una vez tenemos eso, podemos iniciar la VM y deberíamos tener video por HDMi.
 
 # Resultado Final
-![[Pasted image 20261009222451.png]]
+![](<img/Pasted image 20261009222451.png>)
 # Optimizaciones
 Aqui os dejo un ejemplo de el `xml` con mapeo de CPU.
 
