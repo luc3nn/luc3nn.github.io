@@ -17,8 +17,8 @@ title = "Luc3nn"
 [params.author]
   name = "Luc3nn"
   # email = "youremail@example.com"
-  # image = "img/blowfish_logo.png"
-  # imageQuality = 96
+  image = "img/img.png"
+  imageQuality = 96
   headline = "Wannabe security researcher | ejptv2"
   # bio = "Wanna be security reseacher"
   links = [
