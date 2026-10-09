@@ -27,7 +27,7 @@ Un montón de servicios y procesos corriendo en segundo plano que son los culpab
 
 Bueno, una vez ya he expuesto mi excusa para hacer este proyecto, hablaré a groso modo de los objetivos a cumplir en este pequeño proyecto y algunos benchmarks.
 
-Lo que diferencia esta máquina virtual de cualquier otra como Virtual box o VMWare (las mas usadas para usuarios finales), es que estas necesitan virtualizar todo de nuevo, que quiere decir 
+Lo que diferencia esta máquina virtual de cualquier otra como Virtual box o VMWare (las mas usadas para usuarios finales), es que estas necesitan virtualizar todo de nuevo, mas adelante me explayo más, la cosa es que este es el rendimiento que conseguimos:
 
 
 El rendimiento bare metal:
