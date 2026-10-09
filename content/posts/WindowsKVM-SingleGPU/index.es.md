@@ -19,7 +19,7 @@ categories: ["Virtualización", "Linux", "Gaming"]
 showTableOfContents: true
 ---
 
-Después del boom de la inteligencia artificial, todas las empresas (incluidas **mierdasoft**) han decidido implementar IA en todo lo que pueden. Esto se traduce en Windows11 con funciones como **RECALL**, **COPILOT**, **ESTE MISMO EN** **Bing**, **Office**, **Fotos**, etc.
+Después del boom de la inteligencia artificial, todas las empresas (incluidas **microchoft**) han decidido implementar IA en todo lo que pueden. Esto se traduce en Windows11 con funciones como **RECALL**, **COPILOT**, **ESTE MISMO EN** **Bing**, **Office**, **Fotos**, etc.
 Un montón de servicios y procesos corriendo en segundo plano que son los culpables que niños de 15 años me ganen en Valorant, por lo que cansado de tener que **reinstalar** Windows11 cada 4-6 meses para que no se atragante con su propia mierda, decidí pasarme a **Linux**, lose que novedad. La cosa es que el gaming en Linux no es una experiencia tan fluida como en windows11, no me malinterpreteís ha avanzado mucho, pero necesitaba una excusa para hacer esta máquina virtual y sinceramente cuando me siento a jugar no tengo ganas de a media partida ponerme a ver cual ha sido la razón por la que arch (en realidad wayland) ha decidido cerrar mi juego y básicamente porque en Windows11 los juegos tienen mas FPS.
 
 Bueno, una vez ya he expuesto mi excusa para hacer este proyecto, hablaré a groso modo de los objetivos a cumplir en este pequeño proyecto y algunos benchmarks.
