@@ -1,4 +1,23 @@
-# Windows en KVM
+---
+title: "Windows 11 en KVM con Single GPU Passthrough"
+date: 2026-10-09T01:00:00+02:00
+draft: false
+description: "Guía completa para configurar una máquina virtual de Windows 11 en KVM/QEMU con Single GPU Passthrough, CPU Pinning y Hugepages en Arch Linux."
+tags: [
+  "kvm",
+  "qemu",
+  "gpu-passthrough",
+  "vfio",
+  "arch-linux",
+  "windows11",
+  "gaming",
+  "virtualizacion",
+  "cpu-pinning",
+  "hugepages"
+]
+categories: ["Virtualización", "Linux", "Gaming"]
+showTableOfContents: true
+---
 
 Después del boom de la inteligencia artificial, todas las empresas (incluidas **mierdasoft**) han decidido implementar IA en todo lo que pueden. Esto se traduce en Windows11 con funciones como **RECALL**, **COPILOT**, **ESTE MISMO EN** **Bing**, **Office**, **Fotos**, etc.
 Un montón de servicios y procesos corriendo en segundo plano que son los culpables que niños de 15 años me ganen en Valorant, por lo que cansado de tener que **reinstalar** Windows11 cada 4-6 meses para que no se atragante con su propia mierda, decidí pasarme a **Linux**, lose que novedad. La cosa es que el gaming en Linux no es una experiencia tan fluida como en windows11, no me malinterpreteís ha avanzado mucho, pero necesitaba una excusa para hacer esta máquina virtual y sinceramente cuando me siento a jugar no tengo ganas de a media partida ponerme a ver cual ha sido la razón por la que arch (en realidad wayland) ha decidido cerrar mi juego y básicamente porque en Windows11 los juegos tienen mas FPS.
@@ -9,12 +28,12 @@ Lo que diferencia esta máquina virtual de cualquier otra como Virtual box o VMW
 
 
 El rendimiento bare metal:
-![[Pasted image 20260929222656.png]]
+![](<img/Pasted image 20260929222656.png>)
 
 El rendimiento en VM:
-![[Pasted image 20260929222730.png]]
+![](<img/Pasted image 20260929222730.png>)
 Junto a algunos higlights
-![[PHOTO-2026-10-09-01-18-32.jpg]]
+![](<img/PHOTO-2026-10-09-01-18-32.jpg>)
 ## REQUISITOS
 
 - Drivers para juegos instalados (drivers propietarios de nvidia o amd)
@@ -34,8 +53,8 @@ lscpu | grep -i Virtualization
 cat /proc/cpuinfo | grep -E "vmx|svm|0xc0f" # Son lo mismo
 ```
 
-![[Pasted image 20251130211933.png]]
-![[Pasted image 20251130212736.png]]
+![](<img/Pasted image 20251130211933.png>)
+![](<img/Pasted image 20251130212736.png>)
 `VT-x` es para Intel y `AMD-Vi` es para AMD (duh), en el caso de que no nos aparezca nada, quiere decir que la virtualización no esta activada por lo que deberemos entrar en la bios y activarla.
 #### Soporte del kernel
 Ahora debemos verificar que nuestro kernel tiene los módulos de KVM y que dichos módulos se cargan automáticamente, para ello:
@@ -43,7 +62,7 @@ Ahora debemos verificar que nuestro kernel tiene los módulos de KVM y que dicho
 zgrep CONFIG_KVM /proc/config.gz
 ```
 
-![[Pasted image 20251130213608.png]]
+![](<img/Pasted image 20251130213608.png>)
 
 Cuando el output nos muestra `y` este quiere decir que el modulo viene cargado con el kernel, cuando muestra `m` quiere decir que el modulo no esta cargado pero puede ser cargado (que también es parte del kernel) y, por ultimo si nos aparece `n` o esta vacío, esto quiere decir que nuestro kernel no tiene soporte para este modulo, en ese caso podríamos re-compilar el kernel con soporte para KVM o instalar un kernel que ya lo incluya (lo mas sencillo).
 
@@ -53,7 +72,7 @@ Ahora para asegurarnos que los modulos se cargan automaticamente ejecutamos el s
 lsmod | grep kvm
 ```
 
-![[Pasted image 20251130214105.png]]
+![](<img/Pasted image 20251130214105.png>)
 
 Si en el output no nos aparece nada, podemos probar a cargarlos manualmente con `modprobe`, en este caso deberíamos cargar `kvm` y `kvm_intel` o `kvm_amd` .
 - Para que los módulos del kernel carguen automáticamente debemos crear un archivo de configuración con los módulos a cargar:
@@ -143,7 +162,7 @@ for drv in qemu interface network nodedev nwfilter secret storage; do
 done
 ```
 
-![[Pasted image 20251201134606.png]]
+![](<img/Pasted image 20251201134606.png>)
 
 ### Verificando Virtualización
 Verificamos el estado de la virtualización
@@ -152,7 +171,7 @@ Verificamos el estado de la virtualización
 sudo virt-host-validate qemu
 ```
 
-![[Pasted image 20251201135125.png]]
+![](<img/Pasted image 20251201135125.png>)
 
 ### Habilitamos le IOMMU en con GRUB
 
@@ -181,7 +200,7 @@ Primero habilitamos el inicio automático de este y lo activamos ahora.
 sudo systemctl enable --now tuned.service
 ```
 
-![[Pasted image 20251201165131.png]]
+![](<img/Pasted image 20251201165131.png>)
 
 Una vez habilitado modificamos el perfil actual a `virtual-host`.
 
@@ -195,7 +214,7 @@ tuned-adm active # Verificamos de nuevo el perfil actual
 sudo tuned-adm verify # Verificar si el perfil se ha aplicado correctamente
 ```
 
-![[Pasted image 20251201165228.png]]
+![](<img/Pasted image 20251201165228.png>)
 ### Libvirt en system mode
 
 Actualmente si verificamos el estado de libvirt encontraremos que esta en modo `sesion`, esto quiere decir que esta en modo usario. En este estado tenemos privilegios muy limitados y no podemos hacer la principal ventaja de esta guia que es `GPU PASSTHROUGH`, por lo que vamos a cambiarlo a modo sistema.
@@ -221,7 +240,7 @@ sudo virsh uri
 
 ```
 
-![[Pasted image 20251201161353.png]]
+![](<img/Pasted image 20251201161353.png>)
 
 ### Modificando los permisos de imagenes
 
@@ -262,7 +281,7 @@ Para listar las redes virtuales
 sudo virsh net-list --all
 ```
 
-![[Pasted image 20251201195108.png]]
+![](<img/Pasted image 20251201195108.png>)
 
 Para activar una red 
 
@@ -270,7 +289,7 @@ Para activar una red
 sudo virsh net-start default
 ```
 
-![[Pasted image 20251201195156.png]]
+![](<img/Pasted image 20251201195156.png>)
 
 Para hacer que auto-inicie
 
@@ -278,7 +297,7 @@ Para hacer que auto-inicie
 sudo virsh net-autostart default
 ```
 
-![[Pasted image 20251201195248.png]]
+![](<img/Pasted image 20251201195248.png>)
 
 Dumpear el .xml de la red default
 
@@ -286,7 +305,7 @@ Dumpear el .xml de la red default
 virsh net-dumpxml default > default.xml
 ```
 
-![[Pasted image 20251201195832.png]]
+![](<img/Pasted image 20251201195832.png>)
 
 Podemos basarnos en este archivo para modificarlo y generar nuevas redes NAT. Vamos a setear el firewall, es el siguiente archivo:
 
@@ -345,7 +364,7 @@ Esto es para los que quieran que salga en bridge la maquina virtual. Para ello p
 sudo nmcli device status
 ```
 
-![[Pasted image 20251203155426.png]]
+![](<img/Pasted image 20251203155426.png>)
 
 Usando nmcli vamos a crear una interfaz para el bridge
 
@@ -353,7 +372,7 @@ Usando nmcli vamos a crear una interfaz para el bridge
 sudo nmcli connection add type bridge con-name bridge0 ifname bridge0
 ```
 
-![[Pasted image 20251203155610.png]]
+![](<img/Pasted image 20251203155610.png>)
 
 Conectamos la interfaz ethernet (`enp102s0`)  a la nueva interfaz bridge
 
@@ -361,7 +380,7 @@ Conectamos la interfaz ethernet (`enp102s0`)  a la nueva interfaz bridge
 sudo nmcli connection add type ethernet slave-type bridge con-name 'Bridge connection 1' ifname enp2s0 master bridge0
 ```
 
-![[Pasted image 20251203160132.png]]
+![](<img/Pasted image 20251203160132.png>)
 
 Ativamos la nueva interfaz, le habilitamos el autoconect (que se auto inicie) & listamos las interfaces.
 
@@ -372,7 +391,7 @@ sudo nmcli connection up bridge0
 sudo nmcli device status
 ```
 
-![[Pasted image 20251203160229.png]]
+![](<img/Pasted image 20251203160229.png>)
 
 ##### Habilitar en virsh (Virtual Machine Manager) la interfaz bridge
 
@@ -386,68 +405,68 @@ Una vez hemos creado la interfaz, vamos a *setearla* en Virtual Machine Manager.
 </network>
 ```
 
-![[Pasted image 20251203160514.png]]
+![](<img/Pasted image 20251203160514.png>)
 
 Añadimos la red en virsh `net-define`, le habilitamos el autostart y ya esta.
 
-![[Pasted image 20251203160733.png]]
+![](<img/Pasted image 20251203160733.png>)
 
 ## Configurando la maquina virtual de Windows 11
 
  Para crear la maquina virtual de Windows 11 en este caso es sencillo, simplemente debemos abrir `Virtual Machine Manager`. Una vez abierto entramos en File>Edit > Preferences 
 
-  ![[Pasted image 20251205201841.png]]
+  ![](<img/Pasted image 20251205201841.png>)
 
 Una vez dentro Habilitamos `Enable XML editing` y nos dirigimos a la pestaña `New VM` 
 
-![[Pasted image 20251205203937.png]]
+![](<img/Pasted image 20251205203937.png>)
 
 Una vez dentro, vamos a cambiar el storage format de qcow2 a Raw (en el caso de que no tengamos un disco hdd/ssd/nvme al que hacer passthrough), ya que este nos permite tener mas velocidad, entraremos mas en profundidad mas tarde.
 
-![[Pasted image 20251206143830.png]]
+![](<img/Pasted image 20251206143830.png>)
 Una vez hecho el cambio, debería verse de la siguiente manera:
-![[Pasted image 20251206143840.png]]
+![](<img/Pasted image 20251206143840.png>)
 
 Una vez hecho, cerramos y hacemos click al icono de `Create a new virtual machine`
 
-![[Pasted image 20251205201851.png]]
+![](<img/Pasted image 20251205201851.png>)
 
 Le damos a forward.
 
-![[Pasted image 20251205202758.png]]
+![](<img/Pasted image 20251205202758.png>)
 
 Hacemos click en `Browse` para seleccionar nuestra iso, una vez hecho, le damos a `Forward`
-![[Pasted image 20251205202916.png]]
+![](<img/Pasted image 20251205202916.png>)
 
 Seleccionamos la ram que queramos para la maquina virtual y los nucleos lo podemos dejar en 4, ya que despues lo vamos a modificar.
 
-![[Pasted image 20251205202928.png]]
+![](<img/Pasted image 20251205202928.png>)
 
 En este caso seleccionamos el tamañano de disco que queremos que tenga nuestro windows (en este caso he escogido 60g). 
 
-![[Pasted image 20251206143946.png]]
+![](<img/Pasted image 20251206143946.png>)
 
 Y una vez en esta ultima pantalla, le ponemos el nombre que queremos a la vm y **SELECCIONAMOS** `Customize configuration before install`. Esto nos permitira seguir configurando la maquina virtual.
 
-![[Pasted image 20251206144001.png]]
+![](<img/Pasted image 20251206144001.png>)
 
 Una vez aqui, nos aseguramos que tengamos el chipset en `Q35` y firmware `UEFI`.
 
-![[Pasted image 20251206144019.png]]
+![](<img/Pasted image 20251206144019.png>)
 
 Ahora la **CPU**, la cosa es que si lo dejamos como esta y expandimos `Topology`, podemos ver que ha configurado nuestra maquina virtual con 4 `sockets` y cada uno con 1 `core` y 1 `thread`. En este caso quiere decir que **el hipervisor (KVM/QEMU)** nos ha creado 4 cpus por lo que windows piensa que tenemos 4 procesadores de 1 nucleo y 1 hilo. Por lo que vamos a seleccionar `Manually set CPU topology` para configurarlo correctamente.
 
-![[Pasted image 20251206144043.png]]
+![](<img/Pasted image 20251206144043.png>)
 
 En este caso para setear los nucleos y procesadores de la maquina virtual correctamente, vamos a fijarnos en el numero que tenemos arriba donde pone `Logical host CPUs:`
 
-![[Pasted image 20251222160522.png]]
+![](<img/Pasted image 20251222160522.png>)
 
 En este caso tenemos 20, por lo que quiere decir que en total mi procesador tiene 20 cpus lógicas por lo que si vieramos la topología de nuestro procesador (**lo haremos mas tarde**), seria algo como 10 nucleos y 2 hilos por cada nucleo por lo que en total (2\*10 = 20) tenemos 20 CPUs lógicas o vCPUs. En este caso vamos a darle 16 vCPUs para dejar 4 al host.
 
 Por lo que para ello dejaremos en sockets 1 (que solo tenga un procesador nuestra maquina virtual), le podré 8 nucleos y 2 hilos por cada nucleo. Quedará de la siguiente manera:
 
-![[Pasted image 20251206150746.png]]
+![](<img/Pasted image 20251206150746.png>)
 
 Una vez acabado, vamos al apartado de Nuestro disco, en este caso, si entramos, encontramos que es de tipo SATA, este lo vamos a cambiar a VirtIO, ya que obtenemos diferentes ventajas, entre ellas:
 - Menor latencia
@@ -455,147 +474,147 @@ Una vez acabado, vamos al apartado de Nuestro disco, en este caso, si entramos, 
 - Arranca mas rápido
 - Y mucho mas.
 
-![[Pasted image 20251206185704.png]]
+![](<img/Pasted image 20251206185704.png>)
 
 Por lo que despues de enumerar las diferentes ventajas de VirtIO como dirver de nuestro disco, vamos a cambiarlo de SATA a este y adicionalmente vamos a cambiar el cache a `none` (El SO invitado gestiona su propia caché) y Discard mode `unmap` (Cuando archivos se borran, los bloques se liveran). Para ello vamos a hacer los cambios, y se debería ver de la siguiente manera:
 
-![[Pasted image 20251206185726.png]]
+![](<img/Pasted image 20251206185726.png>)
 
 Una vez hecho el cambio del driver de disco, necesitamos añadir los drivers para poder detectarlo dentro de windows por lo que para ello nos dirigiremos a `Add Hardware` 
 
-![[Pasted image 20251206185800.png]]
+![](<img/Pasted image 20251206185800.png>)
 
  Dentro seleccionamos en `Device Type` : `CDROM`  y le damos en `Manage` para seleccionar nuestra iso.
  (link para descargar la iso: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/?C=M;O=D)
 Una vez seleccionado le damos a `Add` 
 
-![[Pasted image 20251206185856.png]]
+![](<img/Pasted image 20251206185856.png>)
 
 Nos dirigimos en Boot Options para seleccionar el orden de arranque de los discos.
 
-![[Pasted image 20251206185913.png]]
+![](<img/Pasted image 20251206185913.png>)
 
 Seleccionamos la ISO que acabamos de añadir y lo ponemos como primera opción.
 
-![[Pasted image 20251206185931.png]]
+![](<img/Pasted image 20251206185931.png>)
 
 Ahora vamos  a configurar el internet y TMP2.0 y ya estamos.
 En este caso, le damos a `NIC :XX:XX:XX`, una vez dentro modificamos de donde vendrá nuestro internet (en este caso haré NAT).
 
-![[Pasted image 20251206190330.png]]
+![](<img/Pasted image 20251206190330.png>)
 
 Y en este caso cambiamos el device model de `e1000e` a `virtio`.
 
-![[Pasted image 20251206190345.png]]
+![](<img/Pasted image 20251206190345.png>)
 
 Eliminamos este “modulo”, llamado `Tablet` el cual no lo necesitamos.
 
-![[Pasted image 20251206190406.png]]
+![](<img/Pasted image 20251206190406.png>)
 
-![[Pasted image 20251222162312.png]]
+![](<img/Pasted image 20251222162312.png>)
 
 Una vez eliminado nos dirigimos a `TPM vNone` 
 
-![[Pasted image 20251206190429.png]]
+![](<img/Pasted image 20251206190429.png>)
 
 Y modificamos el version a `2.0`  y ya estamos.
 
-![[Pasted image 20251206190435.png]]
+![](<img/Pasted image 20251206190435.png>)
 
 Ahora solo hacemos click en el botón de arriba a la izquierda donde pone `Begin Instalation` y ya podemos iniciar con la instalación de Windwos11.
 
-![[Pasted image 20251206190631.png]]
+![](<img/Pasted image 20251206190631.png>)
 
 ## Instalación de Windows 11
 
 Una vez hemos acabado la configuración de windows 11, simplemente debemos hacer la gran tarea de hacer click a `Siguiente` varias veces, esto hasta llegar al apartado del disco.
 
-![[Pasted image 20251206190734.png]]
+![](<img/Pasted image 20251206190734.png>)
 
 Una vez en el apartado del disco, notamos que no nos aparece ningún disco, esto se debe ya que windows no es capaz de detectar el tipo de disco que tenemos, por lo que vamos a instalar el driver de virtio, para poder detectar el disco e instalar el SO, por lo que para ello, le damos a `Cargar Controlador`.
 
-![[Pasted image 20251206190815.png]]
+![](<img/Pasted image 20251206190815.png>)
 
 Una vez dentro, Vamos a seleccionar el disco `virtio-win-X.X.XXX` Dentro de este haremos click en `amd64`>`w11` y le damos a `aceptar`. 
 
-![[Pasted image 20251206223932.png]]
+![](<img/Pasted image 20251206223932.png>)
 
 Instalamos el driver y ahora nos aparecerá el disco. Ya podemos seguir con el proceso de instalación normal hasta llegar al apartado de crear una cuenta online.
 
-![[Pasted image 20251206223954.png]]
+![](<img/Pasted image 20251206223954.png>)
 
-![[Pasted image 20251206224014.png]]
+![](<img/Pasted image 20251206224014.png>)
 Procedemos como siempre. 
-![[Pasted image 20251206224512.png]]
+![](<img/Pasted image 20251206224512.png>)
 
 Ahora estamos en el apartado de crear una cuenta online o conectarla con una ya existente, por lo que si queremos, simplemente instalamos el driver como hemos hecho antes, pero en este caso vamos a bypasear la cuenta online. Para ello hacemos click a las teclas `SHIFT + F10`. Este nos abrira un cmd.
 
-![[Pasted image 20251206224551.png]]
+![](<img/Pasted image 20251206224551.png>)
 
 Dentro de este CMD ejecutaremos el siguiente comando `oobe\BypassNRO.cmd` (en mi caso solo escribo bypa y hago `TAB` ). Pulsamos Enter para ejecutarlo.
 
-![[Pasted image 20251206224620.png]]
+![](<img/Pasted image 20251206224620.png>)
 
 Despues de esto se nos va a reiniciar el ordenador y volvemos a hacer el setup de nuevo, como si nada. Hasta llegar al apartado de `Vamos a conectarte a una red` .
 
-![[Pasted image 20251206224633.png]]
+![](<img/Pasted image 20251206224633.png>)
 
 Una vez aqui, vemos que tenemos opción de seleccionar la opción `No tengo internet`.
 
-![[Pasted image 20251206224654.png]]
+![](<img/Pasted image 20251206224654.png>)
 
 Despues de esto nos va a dejar crear una cuenta ofline.
 
-![[Pasted image 20251206224715.png]]
+![](<img/Pasted image 20251206224715.png>)
 Acabamos de configurar los ultimos pasos.
-![[Pasted image 20251206224751.png]]
+![](<img/Pasted image 20251206224751.png>)
 
 Y ya estamos dentro de nuestra maquina virtual. Ahora solo nos queda instalar drivers, GPU passthrough, CPU pinning y por ultimo Paginación de memoria (casi nada). por lo que para instalar los drivers, simplemente entramos en el explorador de archivos y entramos dentro de la unidad de virtio drivers
 
-![[Pasted image 20251206225031.png]]
+![](<img/Pasted image 20251206225031.png>)
 
 Dentro de la raiz del disco, ejecutamos las guest tools.
 
-![[Pasted image 20251206225058.png]]
+![](<img/Pasted image 20251206225058.png>)
 
  Hacemos click a siguiente e instalar.
 
-![[Pasted image 20251206225133.png]]
+![](<img/Pasted image 20251206225133.png>)
 
 Una vez instalado le damos a close y ya podemos cerrar todo eso.
 
-![[Pasted image 20251206225219.png]]
+![](<img/Pasted image 20251206225219.png>)
 
 Ahora para poder agilizar nuestro windows 11, vamos a ejecutar powershell como administrador.
 
-![[Pasted image 20251206225250.png]]
+![](<img/Pasted image 20251206225250.png>)
 
 Una vez dentro, vamos a ejecutar el siguiente comando `irm christitus.com/win | iex`.
 Este es un script que nos permite tanto instalar como desinstalar aplicaciones del sistema, en este caso lo utilizo para poder instalar firefox sin tener que entrar en edge y `aceptar los terminos y condiciones`.
 
-![[Pasted image 20251206225351.png]]
+![](<img/Pasted image 20251206225351.png>)
 
 Una vez dentro, selecciono Firefox y le doy a `Install/Upgrade Applications`. En este caso aparte de firefox tambien instalará `winget` que es como un gestor de paquetes en terminal para windows. Algo asi como `apt`.
 
-![[Pasted image 20251206225422.png]]
+![](<img/Pasted image 20251206225422.png>)
 
 Una vez haya terminado de instalarse, veremos que nos aparece firefox en nuestro escritorio. Aún dentro del script vamos al apartado `Tweaks`.
 
-![[Pasted image 20251206230606.png]]
+![](<img/Pasted image 20251206230606.png>)
 
 Dentro de aqui vamos a seleccionar todo lo qe deseamos eliminar y le damos a `Run Tweaks`. Esto me ha permitido pasar de windows sin nada de background ocupar 4gb de ram (en un sistema de 8gb) y 12% de cpu, a 1,2gb de ram y 2% de cpu.
 
-![[Pasted image 20251206231006.png]]
+![](<img/Pasted image 20251206231006.png>)
 
 Una vez acabado, podemos cerrarlo y ahora solo voy a eliminar el botón del escritorio de `Mas información`.
 
-![[Pasted image 20251206233452.png]]
+![](<img/Pasted image 20251206233452.png>)
 
 Si quereis eliminarlo Entra dentro del directorio `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel key`
 
 Creamos una nueva `DWORD (32-bit)` llamada `{2cc5ca98-6485-489a-920e-b3e88a6ccce3}` y le ponemos de valor en hexadecimal de 1. Y ya esta, si volvemos al escritorio no lo encontraremos. 
 
-![[Pasted image 20251206233517.png]]
+![](<img/Pasted image 20251206233517.png>)
 
 ## GPU Passthrough
 
@@ -612,7 +631,7 @@ for g in /sys/kernel/iommu_groups/*; do
 done;
 ```
 
-![[Pasted image 20251222165846.png]]
+![](<img/Pasted image 20251222165846.png>)
 
 En este caso mi grafica y mi audio (HDMI) estan dentro del mismo grupo, por lo que por mucho que no vaya a usar el audio por HDMI, también lo tengo que pasar a la maquina virtual.
 
@@ -628,7 +647,7 @@ unix_sock_group = "libvirt"
 unix_sock_rw_perms = "0770"
 ```
 
-![[Pasted image 20251207005549.png]]
+![](<img/Pasted image 20251207005549.png>)
 
 Una vez hecho metemos a nuestro usuario actual dentro de los grupos kvm y libvirt.
 
@@ -636,7 +655,7 @@ Una vez hecho metemos a nuestro usuario actual dentro de los grupos kvm y libvir
 sudo usermod -a -G kvm,libvirt $(whoami)
 ```
 
-![[Pasted image 20251207005640.png]]
+![](<img/Pasted image 20251207005640.png>)
 
 Una vez hecho reiniciamos libvirt.
 
@@ -653,9 +672,9 @@ Una vez reiniciado, modificamos el siguiente archivo, donde entre las lineas `51
 sudo nano /etc/libvirt/qemu.conf
 ```
 
-![[Pasted image 20251207010036.png]]
+![](<img/Pasted image 20251207010036.png>)
 
-![[Pasted image 20251207010059.png]]
+![](<img/Pasted image 20251207010059.png>)
 
 ### Parcheando la vbios de la GPU
 
@@ -720,18 +739,18 @@ Si no te sientes seguro dumpeando tu rom, puedes descargarla desde [aqui](https:
 
 Una vez tenemos la vbios, vamos a patchearla, para ello la abrimos dentro de `OKTETA`.
 
-![[Pasted image 20251207031108.png]]
+![](<img/Pasted image 20251207031108.png>)
 
 Una vez dentro hacemos click sobre `CTRL + F` para filtrar por `VIDEO` en `Char`.
 
-![[Pasted image 20251207031217.png]]
+![](<img/Pasted image 20251207031217.png>)
 
 Una vez encontrado, seleccionamos desde la `U` que hay enfrente de `VIDEO`
 
-![[Pasted image 20251207031353.png]]
+![](<img/Pasted image 20251207031353.png>)
 Cambia el modo a edit con la tecla `insert` y pulsa `DEL` para eliminar todo eso para que quede de la siguiente manera:
 
-![[Pasted image 20251207034312.png]]
+![](<img/Pasted image 20251207034312.png>)
 
 Una vez hecho, creamos una carpeta llamada vgabios y lo metemos ahi con los permisos 644.
 
@@ -752,11 +771,11 @@ Una vez parcheada la rom, vamos a “hijackear” la gpu de linux y pasarsela en
 sudo mkdir /etc/libvirt/hooks
 ```
 
-![[Pasted image 20251207140040.png]]
+![](<img/Pasted image 20251207140040.png>)
 
 Una vez dentro, instalamos tree para poder visualizar mejor la estructura de directorios.
 
-![[Pasted image 20251207140226.png]]
+![](<img/Pasted image 20251207140226.png>)
 
 Crearemos la estructura de archivos dada por la documentación de [libvirt](https://www.libvirt.org/hooks.html#id8), los tenemos que crear dentro del directorio `/etc/libvirt/hooks` y la carpeta que va despues de **qemu.d** (`win11`), debeis sustituirlo por el nombre de la maquina virtual.
 
@@ -765,7 +784,7 @@ mkdir -p qemu.d/win11/prepare/begin/
 mkdir -p qemu.d/win11/release/end/
 ```
 
-![[Pasted image 20251207140336.png]]
+![](<img/Pasted image 20251207140336.png>)
 
 Una vez hecho tendrá la estructura mostrada en el `tree`, dentro de `/etc/libvirt/hooks` vamos a descargarnos un script.
 
@@ -775,7 +794,7 @@ sudo wget 'https://raw.githubusercontent.com/PassthroughPOST/VFIO-Tools/master/l
 sudo chmod +x /etc/libvirt/hooks/qemu # le damos permisos de ejecución
 ```
 
-![[Pasted image 20251207141815.png]]
+![](<img/Pasted image 20251207141815.png>)
 
 Ahora vamos a crear el script que se ejecutara antes de iniciar la maquina virtual, para ello hacemos nano (o el editor de texto que queramos) al siguiente directorio.
 
@@ -793,7 +812,7 @@ readlink /etc/systemd/system/display-manager.service
 
 En este caso tengo sddm
 
-![[Pasted image 20251222180850.png]]
+![](<img/Pasted image 20251222180850.png>)
 
 Por lo que el script se vería de la siguiente manera:
 
@@ -811,7 +830,7 @@ Ahora debemos asegurarnos de cuantas `vtconsoles` tenemos, por lo que para ello 
 ls /sys/class/vtconsole
 ```
 
-![[Pasted image 20251207143647.png]]
+![](<img/Pasted image 20251207143647.png>)
 
 En este caso tenemos 2 (la 0 y la 1) por lo que hacemos bind a esas 2, despues unbindeamos el framebuffer del efi, los modulos de nvidia y por ultimo cargamos los modulos de vfio.
 
@@ -845,11 +864,11 @@ modprobe vfio_iommu_type1
 
 Una vez hecho, vamos a hacer lo mismo pero al revés para `/release/end/revert.sh`. Se debería ver de la siguiente manera:
 
-![[Pasted image 20251207161337.png]]
+![](<img/Pasted image 20251207161337.png>)
 
 Una vez hecho, vamos a `virtual machine manager`, y en `Add`>`PCI Host Device`. Añadimos tanto la grafica como el audio HDMI.
 
-![[Pasted image 20251207144603.png]]
+![](<img/Pasted image 20251207144603.png>)
 
 Entramos en la grafica y en XML, le añadimos la siguiente linea para darle el archivo ROM:
 
@@ -857,33 +876,33 @@ Entramos en la grafica y en XML, le añadimos la siguiente linea para darle el a
 `<rom file='/usr/share/vgabios/patched.rom'/>`
 ```
 
-![[Pasted image 20251222154732.png]]
+![](<img/Pasted image 20251222154732.png>)
 
 Adicionalmente **eliminamos**  cualquier `spice` o `virtual monitor`. Una vez hecho, iniciamos la VM.
 
 Una vez ejecutada vemos que seguimos sin grafica, para ello le tenemos que instralar los drivers.
 
-![[Pasted image 20251207163251.png]]
+![](<img/Pasted image 20251207163251.png>)
 
 Dentro de administrador de tareas tampoco sale.
 
-![[Pasted image 20251207163259.png]]
+![](<img/Pasted image 20251207163259.png>)
 
 Procedemos con la instalación de los drivers NORMALES de nuestra grafica.
 
-![[Pasted image 20251207163308.png]]
+![](<img/Pasted image 20251207163308.png>)
 
-![[imagen.png]]
+![](<img/imagen.png>)
 
-![[2.png]]
+![](<img/2.png>)
 
 Una vez acabe, ahí reconocerá nuestra targeta grafica.
 
-![[3.png]]
+![](<img/3.png>)
 
 Si entramos en ajustes, vemos como nos esta soportando 2k a 165hz.
 
-![[4.png]]
+![](<img/4.png>)
 ### CPU PINING
 
 Una vez finalizada la configuración de **GPU Passthrough**, el siguiente paso es implementar **CPU Pinning**. Para comprender su utilidad, es importante analizar primero el contexto actual **sin CPU Pinning**.
@@ -900,13 +919,13 @@ lscpu -e
 lstopo # es mas grafico
 ```
 
-![[Pasted image 20251207161441.png]]
+![](<img/Pasted image 20251207161441.png>)
 
 ```bash
 lstopo
 ```
 
-![[Pasted image 20251207161519.png]]
+![](<img/Pasted image 20251207161519.png>)
 
 Encontramos en nuestra topologia de procesador que tenemos 5 P-cores (Performance) y 8 E-cores (Efficient), en este caso tenemos HiperThreading activado, pero solo en 5 nucleos de los 13.
 En este caso como tenemos que quitarle video de la maquina y paramos el display manager (sddm), pues como el host solo va a correr cosas como: `systemd`, `I/O scheduler` (o no si hacemos usb pasthrough), por lo que en este contexto 2 E-cores que son 2 nucleos y 2 hilos tienen la suficiente “potencia” como para gestionar esto por lo que nos quedaremos con todos los `P-Cores` para la vm.
@@ -965,7 +984,7 @@ Ahora Windows no estará constantemente peleándose con arch sobre quien tiene q
 
 Por lo que vamos a configurar la topología de la CPU en la configuración de la VM, para ello entramos en `Virtual Machine Manager`, En la maquina le damos a `Show Virtual Hardware` Y dentro de `Overview` entramos en XML
 
-![[Pasted image 20251212154620.png]]
+![](<img/Pasted image 20251212154620.png>)
 
 En vez de usar 16vCPUs vamos a usar 18:
 
@@ -992,7 +1011,7 @@ En vez de usar 16vCPUs vamos a usar 18:
   </cputune>
 ```
 
-![[Pasted image 20251212160413.png]]
+![](<img/Pasted image 20251212160413.png>)
 
 Con esto cada ver que se inicie la maquina virtual (de manera automatica) (y durante su ejecucción) arch no podrá acceder a esos nucleos.
 ## HUGE PAGES
@@ -1008,7 +1027,7 @@ En este caso le hemos dado “14336”Mib de RAM a la vm, por lo que vamos a hac
   </memoryBacking>
 ```
 
-![[Pasted image 20251222183020.png]]
+![](<img/Pasted image 20251222183020.png>)
 
 Ahora vamos a crear el archivo de configuración para definir el comportamiento de la memoria para la maquina virtual win11 KVM (al kernel). 
 
@@ -1025,18 +1044,18 @@ vm.nr_hugepages = 0
 vm.nr_overcommit_hugepages = 6600
 ```
 
-![[Pasted image 20251211193144.png]]
+![](<img/Pasted image 20251211193144.png>)
 
 Ahora forzamos que recarguen los parametros del kernel sin reiniciar la maquina virtual:
 
-![[Pasted image 20251211193218.png]]
+![](<img/Pasted image 20251211193218.png>)
 
 Por lo que ya hemos acabado de configurar nuestra maquina virtual de windows 11. De nuevo aqui dejo algunos benchmarks sobre el rendimiento:
 
 Barebones:
 
-![[Captura de pantalla 2025-12-22 182145.png]]
+![](<img/Captura de pantalla 2025-12-22 182145.png>)
 
 
 VM
-![[Captura de pantalla 2025-12-22 211200.png]]
+![](<img/Captura de pantalla 2025-12-22 211200.png>)
